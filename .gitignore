@@ -37,3 +37,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# .dta and .gz data from IPUMS
+*.dta
+*.gz
+
+#Mac specific ignores
+*.DS_Store
