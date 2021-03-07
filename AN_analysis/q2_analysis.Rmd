@@ -1,0 +1,44 @@
+---
+title: "DTC_5300_Q2_Analysis"
+author: "Andrew Nalundasan"
+date: "3/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+source('../AN_code/q2_code.R', local = FALSE)
+```
+
+
+## Why you are running the analyses you are running
+## Analysis
+### How the analyses answer the question being asked, and what the result is
+
+## Carefully interpreting the results
+## Results
+### Presenting the results in an appealing way
+
+## Acknowledging the assumptions you are making in each analysis, how plausible those assumptions are in the context of your data, and any evidence you can provide backing up those assumptions
+## Assumptions
+
+
+## After doing all analyses related to a given question, provide a generalized answer to the main questions
+## Conclusion
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
