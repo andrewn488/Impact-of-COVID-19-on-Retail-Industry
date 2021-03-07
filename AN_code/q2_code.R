@@ -36,51 +36,51 @@ retail_select <- retail %>% select("YEAR", "MONTH", "CPSID", "STATEFIP", "Occupa
 vtable(retail_select)
 
 # group by Industry
-retail_group_by <- retail_select %>% group_by(Industry)
+# retail_group_by <- retail_select %>% group_by(Industry)
 
 # plot the data to look at raw relationship
-density <- ggplot(retail_select, aes(x = Industry)) + 
-  geom_density() + 
-  labs(x = 'Industry', title = 'Distribution of Industry across Years')
-density
+#density <- ggplot(retail_select, aes(x = Industry)) + 
+#  geom_density() + 
+#  labs(x = 'Industry', title = 'Distribution of Industry across Years')
+# density
 
 
-ggplot(data = retail_group_by) +
-  geom_histogram(mapping = aes(x = Industry), binwidth = 1000) +
-  xlab('Industry') +
-  ggtitle('Distribution of Industry across Years')
+#ggplot(data = retail_group_by) +
+#  geom_histogram(mapping = aes(x = Industry), binwidth = 1000) +
+#  xlab('Industry') +
+#  ggtitle('Distribution of Industry across Years')
 
 # scatterplot by year
-retail_select %>% 
-  group_by(YEAR, Industry) %>% 
-  ggplot(mapping = aes(x = YEAR, y = Industry, color = Industry)) +
-  geom_point() +
-  my_theme +
-  labs(title = "Distribution of Industries across Years",
-       subtitle = "Industries and Years",
-       x = "Year",
-       y = "Industry") +
-  scale_color_manual(values = c("winter" = "#d6dee1", "spring" = "#d6dee1",
-                                "summer" = "#002060", "fall" = "#d6dee1")) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
+# retail_select %>% 
+#  group_by(YEAR, Industry) %>% 
+#  ggplot(mapping = aes(x = YEAR, y = Industry, color = Industry)) +
+#  geom_point() +
+#  my_theme +
+#  labs(title = "Distribution of Industries across Years",
+#       subtitle = "Industries and Years",
+#       x = "Year",
+#       y = "Industry") +
+#  scale_color_manual(values = c("winter" = "#d6dee1", "spring" = "#d6dee1",
+#                                "summer" = "#002060", "fall" = "#d6dee1")) +
+#  theme(axis.text.x = element_blank(),
+#        axis.ticks.x = element_blank())
 
 
 
 ##### Data Viz ###########
-my_theme <- theme(panel.border = element_blank(),
-                  panel.background = element_blank(),
-                  axis.line = element_line(color = "gray"),
-                  axis.ticks = element_line(color = "gray"),
-                  plot.title = element_text(color = "#808080", size = 16, face = "bold"),
-                  plot.subtitle = element_text(color = "#808080", size = 14, face = "plain"),
-                  axis.text.x = element_text(color = "#808080"),
-                  axis.text.y = element_text(color = "#808080"),
-                  axis.title = element_text(color = "#808080", size = 10, face = "plain"),
-                  legend.title = element_text(color = "#808080", size = 12, face = "plain"),
-                  legend.text = element_text(color = "#808080", size = 10, face = "plain"),
-                  plot.caption = element_text(color = "#808080", size = 10, face = "plain")
-)
+# my_theme <- theme(panel.border = element_blank(),
+#                  panel.background = element_blank(),
+#                  axis.line = element_line(color = "gray"),
+#                  axis.ticks = element_line(color = "gray"),
+#                  plot.title = element_text(color = "#808080", size = 16, face = "bold"),
+#                  plot.subtitle = element_text(color = "#808080", size = 14, face = "plain"),
+#                  axis.text.x = element_text(color = "#808080"),
+#                  axis.text.y = element_text(color = "#808080"),
+#                  axis.title = element_text(color = "#808080", size = 10, face = "plain"),
+#                  legend.title = element_text(color = "#808080", size = 12, face = "plain"),
+#                  legend.text = element_text(color = "#808080", size = 10, face = "plain"),
+#                  plot.caption = element_text(color = "#808080", size = 10, face = "plain")
+#)
 
 
 
