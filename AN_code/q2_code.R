@@ -26,7 +26,37 @@ retail <- read_csv('../AN_raw_data/cps_00002.csv.gz')
 ####### Working with Data ##########
 
 # rename variables to be understandable
-retail <- retail %>% rename("State (FIPS code)" = EMPSTAT, "Occupation" = OCC, "Industry_1990 basis" = IND1990, "Industry" = IND, 'Reason for unemployment' = WHYUNEMP, "Industry Last Year" = INDLY, "Income from worker's' compensation" = INCWKCOM, "Job Type" = JTYPE, "Worked remotely for pay due to pandemic" = COVIDTELEW, "Unable to work due to pandemic" = COVIDUNAW, "Received pay for hours not worked due to pandemic" = COVIDPAID, "Prevented from looking for work due to pandemic" = COVIDLOOK)
+retail_select <- retail %>% select(YEAR, STATEFIP, OCC, IND, WHYUNEMP) %>% 
+  rename("Occupation" = OCC, "Industry" = IND)
+
+# Regression: 
+# WHYUNEMP ~ Retail + Industry A + Industry B + Industry C + YEAR + e
+# I need to tune up this model
+# What other models would be of value?
+
+# pull out Industries -- Retail vs. others
+# difference between mine and JG - she puts "other industry" into "Other" and I break it up to different ones
+retail_vs_sector <- retail_select %>% 
+  mutate(Retail = Industry %between% c(4670,5790),
+         Arts_Ent_Rec_Accom_Food = Industry %between% c(8560, 8690),
+         Construction = Industry == 770,
+         FINC_Ins_Real_Estate = Industry %between% c(6870, 7190),
+         Public_Admin = Industry %between% c(9370, 9590)
+         )
+
+vtable(retail_vs_sector)
+
+
+m1 <- lm(WHYUNEMP ~ Retail + Arts_Ent_Rec_Accom_Food + Construction + FINC_Ins_Real_Estate +
+           Public_Admin, data = retail_vs_sector)
+
+m2 <- lm(Retail ~ YEAR, data = retail_vs_sector)
+
+export_summs(m1, m2)
+
+
+
+  
 
 # look at variables and take note of Class
 vtable(retail)
@@ -84,7 +114,33 @@ vtable(retail_select)
 
 
 
+## Mikayla Viz ##
 
+
+#sum of unemployed
+sum_unemp <- wip_emp_data %>%
+  count(survey_dates) %>%
+  filter(survey_dates >= "2019-11-01")
+
+plot_total <- ggplot(data = sum_unemp, aes(survey_dates, n)) +
+  geom_bar(stat = "identity") + 
+  plot_total
+
+sum_by_why <- wip_emp_data %>%
+  count(survey_dates, whyunemp) %>%
+  filter(survey_dates >= "2019-11-01")
+
+plot_by_why <- sum_by_why %>%
+  ggplot(aes(x = survey_dates, y = n, fill = factor(whyunemp)))+
+  scale_fill_discrete(name = "Reason",
+                      labels=c("Laid Off", 
+                               "Temporary Work Concluded", "Loss of Work")) +
+  geom_bar(position = "dodge", stat = "identity") +
+  theme(legend.position="bottom") + 
+  xlab("Month") +
+  ylab("Number of People")
+
+plot_by_why
 
 
 
