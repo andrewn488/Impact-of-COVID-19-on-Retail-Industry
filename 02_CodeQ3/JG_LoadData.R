@@ -85,7 +85,7 @@ df <- df %>%
            yrmo < 20204 ~ 0,
            yrmo > 20202 ~ 1),
          time = cumsum(c(1,as.numeric(diff(yrmo))!=0))) %>%
-  filter(employed == 1, yrmo > 20191) %>%
+  filter(yrmo > 201812) %>%
   select(-cpsidp, -yrmo, -sex, -race, - marst, -empstat, -educ99)
 
 vtable(df)
