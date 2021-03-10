@@ -2,6 +2,7 @@
 1,Alabama,4/3/20
 2,Alaska,3/27/20
 4,Arizona,3/30/20
+5,Arkansas,
 6,California,3/19/20
 8,Colorado,3/25/20
 9,Connecticut,3/20/20
@@ -13,6 +14,7 @@
 16,Idaho,3/25/20
 17,Illinois,3/20/20
 18,Indiana,3/23/20
+19,Iowa,
 20,Kansas,3/28/20
 21,Kentucky,3/22/20
 22,Louisiana,3/22/20
@@ -24,6 +26,7 @@
 28,Mississippi,4/1/20
 29,Missouri,4/3/20
 30,Montana,3/26/20
+31,Nebraska,
 32,Nevada,3/31/20
 33,New Hampshire,3/26/20
 34,New Jersey,3/21/20
@@ -45,3 +48,4 @@
 53,Washington,3/23/20
 54,West Virginia,3/23/20
 55,Wisconsin,3/24/20
+56,Wyoming,
