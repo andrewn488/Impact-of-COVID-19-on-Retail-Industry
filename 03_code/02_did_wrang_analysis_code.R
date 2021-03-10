@@ -53,7 +53,7 @@ effect_plot(lm_national, treatment_after, plot.points = TRUE,
             x.label = 'Survey Dates', 
             y.label =  'Reported Layoff Rates per Month',
             point.color = 'blue2', 
-            main.title = "DiD National Model between Stay-at-Home Order States")
+            main.title = "DiD National Model Effects Plot between Stay-at-Home Order States")
 
 # because the national model compares states with different population sizes, 
 # densities and economies that could impact the modeling, the next model filters the 
