@@ -16,7 +16,7 @@ df <- read_dta("01_DataQ3/cps_00012.dta")
 
 vtable(df)
 
-df_a <- df %>%
+df <- df %>%
   filter(empstat != 1, labforce == 2) %>% # excluding military employment and people not in laborforce
   mutate(
     female = case_when(
@@ -91,7 +91,7 @@ df_a <- df %>%
 
 ######## weight data 
 survey <- 
-  as_survey(df_a, weights = c(wtfinl)) 
+  as_survey(df, weights = c(wtfinl)) 
 
 ######## Employment Rate full data
 employment_monthly <- survey %>% 
@@ -109,14 +109,11 @@ monthly_rates <- left_join(employment_monthly, unemployment_monthly, by = c("yea
 #vtable(monthly_rates)
 
 ###### merge monthly rates back into data set
-df_b <- left_join(df_a, monthly_rates, by = c("year", "month"))
+df_b <- left_join(df, monthly_rates, by = c("year", "month"))
 
-cutoff <- df_b %>%
-  distinct(year, month, time, unemployment_rate, employment_rate) %>%
-  filter(year == 2020, month %in% c(2,3,4))
+df_b <- 
 
-
-ggplot(df_b, aes(x = time, y = employment_rate), color = factor(female)) + 
+ggplot(df_b, aes(x = covid*time, y = employment_rate), color = factor(female)) + 
   geom_point() + 
   xlab("Monthly Employment Rate") +
   ylab("Employment Rate") +
@@ -125,8 +122,20 @@ ggplot(df_b, aes(x = time, y = employment_rate), color = factor(female)) +
 
 ############# REGRESSIONS
 
-femalereg <- lm(employment_rate ~ female*covid + covid*time, df_b)
+### Female Regression Results 
+femalereg <- lm(Iemployment_rate ~ female*covid + covid*time, df)
 export_summs(femalereg, digits = 9, robust = TRUE)
+
+# Regression results + female vs male employment:
+ggplot(data=df_b, 
+       aes(x=covid, y = employment_rate, 
+           group= female, 
+           color=factor(female))) + 
+  geom_line() + 
+  xlab("Covid") + 
+  ylab("Employment Rate") + 
+  scale_color_discrete(name = "Sex", 
+                       labels=c("Male", "Female"))
 
 agereg <- lm(employment_rate ~ age*covid + covid*time, df_b)
 export_summs(agereg, digits = 9, robust = TRUE)
@@ -161,6 +170,7 @@ female_unemp_monthly <- survey %>%
 
 ## join data
 female_rates_monthly <- left_join(female_emp_monthly, female_unemp_monthly,by = c("year", "month"))
+
 
 
 ############## Married
