@@ -1,4 +1,3 @@
-
 ############### Load libraries
 library(tidyverse)
 library(jtools)
@@ -8,7 +7,7 @@ library(lubridate)
 library(tidylog)
 library(estimatr)
 library(srvyr) # install.packages("srvyr")
-library(zoo)
+library(zoo) # dates library with yearmo
 options(scipen=999) # remove scientific notation
 
 ############### Load Data
@@ -30,26 +29,34 @@ df <- df %>%
       employed == 1 ~ 0, # opposite of employed
       employed == 0 ~ 1),# opposite of employed
     ageGeneration = case_when(
-      age %in% c(16:22) ~ "Generation Z",
+      age %in% c(16:22) ~ "GenerationZ",
       age %in% c(23:38) ~ "Millennials",
-      age %in% c(39:54) ~ "Generation X",
-      age %in% c(55:73) ~ "Baby Boomers"),
+      age %in% c(39:54) ~ "GenerationX",
+      age %in% c(55:73) ~ "BabyBoomers"),
     highestEduc = case_when(
-      educ99 == 1 ~ "no school completed",
-      educ99 == 4 ~ "1st - 4th grade",
-      educ99 == 5 ~ "5th - 8th grade",
-      educ99 == 6 ~ "9th grade",
-      educ99 == 7 ~ "10th grade",
-      educ99 == 8 ~ "11th grade",
-      educ99 == 9 ~ "12th grade, no diploma",
-      educ99 == 10 ~ "High School graduate or GED",
-      educ99 == 11 ~ "Some college no degree",
-      educ99 == 13 ~ "Associate degree occupational program",
-      educ99 == 14 ~ "Associate degree academic program",
-      educ99 == 15 ~ "Bachelor's degree",
-      educ99 == 16 ~ "Master's degree",
-      educ99 == 17 ~ "Professional degree",
-      educ99 == 18 ~ "Doctorate degree"),
+      educ99 == 1 ~ "no_school_completed",
+      educ99 == 4 ~ "1st_4th grade",
+      educ99 == 5 ~ "5th_8th grade",
+      educ99 == 6 ~ "9th_grade",
+      educ99 == 7 ~ "10th_grade",
+      educ99 == 8 ~ "11th_grade",
+      educ99 == 9 ~ "12th_grade_no_diploma",
+      educ99 == 10 ~ "High_School_graduate_or_GED",
+      educ99 == 11 ~ "Some_college_no_degree",
+      educ99 == 13 ~ "Associate_degree_occupational_program",
+      educ99 == 14 ~ "Associate_degree_academic_program",
+      educ99 == 15 ~ "Bachelors_degree",
+      educ99 == 16 ~ "Masters_degree",
+      educ99 == 17 ~ "Professional_degree",
+      educ99 == 18 ~ "Doctorate_degree"),
+    educationCategories = case_when(
+      educ99 %in% c(1:9) ~ 'Below_HS_Graduate',
+      educ99 %in% c(10, 11) ~ 'HighSchoolGraduate',
+      educ99 %in% c(13,14) ~ 'AssociateDegree',
+      educ99 == 15 ~ 'BachelorDegree',
+      educ99 == 16 ~ 'MasterDegree',
+      educ99 == 17 ~ 'ProfessionalDegree',
+      educ99 == 18 ~ 'DoctorateDegree'),
     racialCategories = case_when(
       race == 100 ~ "White",
       race == 200 ~ "Black",
@@ -90,9 +97,9 @@ df <- df %>%
   mutate(
     time = cumsum(c(1,as.numeric(diff(yrmo))!=0))) %>%
   select(year, month, wtfinl, ageGeneration, age, sex, racialCategories, childrenHH, 
-         female, married, employed, unemployed, highestEduc, covid, time) 
+         female, married, employed, unemployed, highestEduc, educationCategories, covid, time) 
 
-######## weight data 
+######## add weight to survey data 
 survey <- 
   as_survey(df, weights = c(wtfinl)) 
 
@@ -106,45 +113,19 @@ unemployment_monthly <- survey %>%
   group_by(year, month) %>% 
   summarize(unemployment_rate = survey_mean(unemployed))
 
-# join data
+# join employment rates into one dataset
 monthly_rates <- left_join(employment_monthly, unemployment_monthly, by = c("year", "month"))
-
-#vtable(monthly_rates)
 
 ###### merge monthly rates back into data set
 #df_b <- left_join(df, monthly_rates, by = c("year", "month"))
 
-#ggplot(survey, aes(x = covid*time, y = employment_rate), color = factor(female)) + 
- # geom_point() + 
- # xlab("Monthly Employment Rate") +
- # ylab("Employment Rate") +
- # geom_vline(aes(xintercept=14.5), color = 'blue', linetype='dashed') +
- # theme(axis.text.x = element_blank())
-
-
-
-racereg <- lm_robust(employed ~ racialCategories*covid + covid*time, survey)
-export_summs(racereg, digits = 9, robust = TRUE)
-
-marriedreg <- lm_robust(employed ~ married*covid + covid*time, survey)
-export_summs(marriedreg, digits = 9, robust = TRUE)
-
-educreg <- lm_robust(employed ~ highestEduc*covid + covid*time, survey)
-export_summs(educreg, digits = 9, robust = TRUE)
-
-childrenreg <- lm_robust(employed ~ childrenHH*covid + covid*time, survey)
-export_summs(childrenreg, digits = 9, robust = TRUE)
-
-####################################################################
-###################### Employment Per Group ########################
-####################################################################
-
-############## Female Analysis
+######################################## Gender Analysis ############################################
+######################################################################################################
+### Linear Probability Model: Gender Regression Results 
 femalereg <- lm_robust(employed ~ female*covid + covid*time, survey)
 export_summs(femalereg, digits = 9, robust = TRUE)
 
-### Plot Employment Rates
-## females v males monthly employment
+### Plot Employment Rates: females v males monthly employment
 female_emp_monthly <- survey %>% 
   group_by(year, month, female) %>% 
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
@@ -158,8 +139,6 @@ female_unemp_monthly <- survey %>%
 
 ## join data
 female_rates_monthly <- left_join(female_emp_monthly, female_unemp_monthly,by = c("year", "month"))
-
-
 female_df <- left_join(df, female_rates_monthly, by = c("year", "month"))
 
 vtable(female_df)
@@ -180,7 +159,6 @@ female_df_z <- female_df %>%
   mutate(year_month = (Date = as.yearmon(year_month))) %>%
   mutate(year_month = as.Date(year_month))
 
-
 #Employment rate men V women
 ggplot(female_df_z, aes(year_month)) + 
   geom_line(aes(
@@ -197,7 +175,7 @@ ggplot(female_df_z, aes(year_month)) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 
 
-#unemployment rate
+# unemployment rates
 ggplot(female_df_z, aes(year_month)) + 
   geom_line(aes(
     y = male_unemployment_rate, color = "men")) + 
@@ -212,10 +190,13 @@ ggplot(female_df_z, aes(year_month)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 
+##################################### Marriage Status Analysis ########################################
+######################################################################################################
+### Linear Probability Model: Marriage Status Regression Results 
+marriedreg <- lm_robust(employed ~ married*covid + covid*time, survey)
+export_summs(marriedreg, digits = 9, robust = TRUE)
 
-
-############## Married############## Married
-## married v non-married monthly employment rate
+### Plot Employment Rates: married v non-married monthly employment
 married_emp_monthly <- survey %>% 
   group_by(year, month, married) %>% 
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
@@ -229,10 +210,7 @@ married_unemp_monthly <- survey %>%
 
 ## join data
 married_rates_monthly <- left_join(married_emp_monthly, married_unemp_monthly,by = c("year", "month"))
-
-
 married_df <- left_join(df, married_rates_monthly, by = c("year", "month"))
-
 
 married_df_z <- married_df %>%
   rename(not_employment_rate = 'employment_rate_0',
@@ -244,7 +222,6 @@ married_df_z <- married_df %>%
   unite(year_month, c("year", "month"), sep = "-")  %>%
   mutate(year_month = (Date = as.yearmon(year_month))) %>%
   mutate(year_month = as.Date(year_month))
-
 
 #Employment rate Married V Not Married
 ggplot(married_df_z, aes(year_month)) + 
@@ -261,20 +238,20 @@ ggplot(married_df_z, aes(year_month)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 
-############## Age Analysis 
+##################################### Age Generation Analysis ########################################
+######################################################################################################
+### Linear Probability Model:  Age Generation Regression Results 
 agereg <- lm_robust(employed ~ ageGeneration*covid + covid*time, survey)
 export_summs(agereg, digits = 9, robust = TRUE)
 
-### Plot Employment Rates
-## females v males monthly employment
-
-# monthly unemployment rate by age
+### Plot Employment Rates: 
+# Employment rates by age
 age_emp_monthly <- survey %>% 
   group_by(year, month, ageGeneration) %>% 
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
   pivot_wider(names_from = ageGeneration, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
 
-## monthly unemployment rate by age
+## Unemployment rate by age
 age_unemp_monthly <- survey %>% 
   group_by(year, month, ageGeneration) %>% 
   summarize(unemployment_rate = survey_mean(unemployed, vartype = "ci")) %>% 
@@ -282,46 +259,51 @@ age_unemp_monthly <- survey %>%
 
 ## join data
 age_rates_monthly <- left_join(age_emp_monthly, age_unemp_monthly,by = c("year", "month"))
+age_df <- left_join(df, age_rates_monthly, by = c("year", "month"))
 
+# convert to years
+age_df_z <- age_df %>%
+  unite(year_month, c("year", "month"), sep = "-")  %>%
+  mutate(year_month = (Date = as.yearmon(year_month))) %>%
+  mutate(year_month = as.Date(year_month))
 
+# Plot
+ggplot(age_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = employment_rate_BabyBoomers, color = "Baby Boomers")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_BabyBoomers, 
+                  ymin = employment_rate_low_BabyBoomers), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_GenerationX, color = "Generation X")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_GenerationX, 
+                  ymin = employment_rate_low_GenerationX), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_GenerationZ, color = "Generation Z")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_GenerationZ, 
+                  ymin = employment_rate_low_GenerationZ), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_low_Millennials, color = "Millennials")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Millennials, 
+                  ymin = employment_rate_low_Millennials), alpha=0.2) +
+  
+  labs(title = "Employment Rates for Age Generations", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
 
-############## race
-# monthly unemployment rate by racial category
-race_emp_monthly <- survey %>% 
-  group_by(year, month, racialCategory) %>% 
-  summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
-  pivot_wider(names_from = racialCategory, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
+################################# People in Households with Children Analysis ########################################
+######################################################################################################
+### Linear Probability Model:  Children living in Household Regression Results 
+childrenreg <- lm_robust(employed ~ childrenHH*covid + covid*time, survey)
+export_summs(childrenreg, digits = 9, robust = TRUE)
 
-## monthly unemployment rate by racial category
-race_unemp_monthly <- survey %>% 
-  group_by(year, month, racialCategory) %>% 
-  summarize(unemployment_rate = survey_mean(unemployed, vartype = "ci")) %>% 
-  pivot_wider(names_from = racialCategory, values_from = c(unemployment_rate,unemployment_rate_low,unemployment_rate_upp))
-
-## join data
-race_rates_monthly <- left_join(race_emp_monthly, race_unemp_monthly,by = c("year", "month"))
-
-
-
-############## Educ
-# monthly unemployment rate by racial category
-educ_emp_monthly <- survey %>% 
-  group_by(year, month, highestEduc) %>% 
-  summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
-  pivot_wider(names_from = highestEduc, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
-
-## monthly unemployment rate by race
-educ_unemp_monthly <- survey %>% 
-  group_by(year, month, highestEduc) %>% 
-  summarize(unemployment_rate = survey_mean(unemployed, vartype = "ci")) %>% 
-  pivot_wider(names_from = highestEduc, values_from=c(unemployment_rate,unemployment_rate_low,unemployment_rate_upp))
-
-## join data
-educ_rates_monthly <- left_join(educ_emp_monthly, educ_unemp_monthly, by = c("year", "month"))
-
-
-############## Children in HH
-# monthly unemployment rate children in hh v no children
+### Plot Employment Rates: 
+# People with children in hh v no children Employment
 child_emp_monthly <- survey %>% 
   group_by(year, month, childrenHH) %>% 
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
@@ -335,11 +317,7 @@ child_unemp_monthly <- survey %>%
 
 ## join data
 child_rates_monthly <- left_join(child_emp_monthly, child_unemp_monthly, by = c("year", "month"))
-
-
-
 child_df <- left_join(df, child_rates_monthly, by = c("year", "month"))
-
 
 child_df_z <- child_df %>%
   rename(no_employment_rate = 'employment_rate_0',
@@ -353,7 +331,7 @@ child_df_z <- child_df %>%
   mutate(year_month = as.Date(year_month))
 
 
-#Employment rate Married V Not Married
+# Plot 
 ggplot(child_df_z, aes(year_month)) + 
   geom_line(aes(
     y = no_employment_rate, color = "No Children in HH")) + 
@@ -367,6 +345,99 @@ ggplot(child_df_z, aes(year_month)) +
   theme(legend.title = element_blank()) +
   scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
   theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+########################################  Education Level Analysis ############################################
+###############################################################################################################
+### Linear Probability Model:  Highest Education Regression Results 
+educreg <- lm_robust(employed ~ highestEduc*covid + covid*time, survey)
+export_summs(educreg, digits = 9, robust = TRUE)
+
+### Linear Probability Model:  Education Category Regression Results 
+educCreg <- lm_robust(employed ~ educationCategories*covid + covid*time, survey)
+export_summs(educCreg, digits = 9, robust = TRUE)
+
+
+# monthly employment rate by education level category
+educ_emp_monthly <- survey %>% 
+  group_by(year, month, educationCategories) %>% 
+  summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
+  pivot_wider(names_from = educationCategories, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
+
+educ_df <- left_join(df, educ_emp_monthly, by = c("year", "month"))
+vtable(educ_df)
+
+educ_df_z <- educ_df %>%
+  unite(year_month, c("year", "month"), sep = "-")  %>%
+  mutate(year_month = (Date = as.yearmon(year_month))) %>%
+  mutate(year_month = as.Date(year_month))
+
+#Plot
+ggplot(educ_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = employment_rate_AssociateDegree, color = "Associate Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_AssociateDegree, 
+                  ymin = employment_rate_low_AssociateDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_BachelorDegree, color = "Bachelor's Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_BachelorDegree, 
+                  ymin = employment_rate_low_BachelorDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_Below_HS_Graduate, color = "Below High School Graduate")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Below_HS_Graduate, 
+                  ymin = employment_rate_low_Below_HS_Graduate), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_DoctorateDegree, color = "Doctorate Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_DoctorateDegree, 
+                  ymin = employment_rate_low_DoctorateDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_HighSchoolGraduate, color = "High School Graduate")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_HighSchoolGraduate, 
+                  ymin = employment_rate_low_HighSchoolGraduate), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_MasterDegree, color = "Master's Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_MasterDegree, 
+                  ymin = employment_rate_low_MasterDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_ProfessionalDegree, color = "Professional Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_ProfessionalDegree, 
+                  ymin = employment_rate_low_ProfessionalDegree), alpha=0.2) +
+  
+  labs(title = "Employment Rates for Education Levels", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+#####################################  Racial Category Analysis ############################################
+######################################################################################################
+### Linear Probability Model:  Racial Category Regression Results 
+racereg <- lm_robust(employed ~ racialCategories*covid + covid*time, survey)
+export_summs(racereg, digits = 9, robust = TRUE)
+
+
+race_emp_monthly <- survey %>% 
+  group_by(year, month, racialCategory) %>% 
+  summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
+  pivot_wider(names_from = racialCategory, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
+
+## monthly unemployment rate by racial category
+race_unemp_monthly <- survey %>% 
+  group_by(year, month, racialCategory) %>% 
+  summarize(unemployment_rate = survey_mean(unemployed, vartype = "ci")) %>% 
+  pivot_wider(names_from = racialCategory, values_from = c(unemployment_rate,unemployment_rate_low,unemployment_rate_upp))
+
+## join data
+race_rates_monthly <- left_join(race_emp_monthly, race_unemp_monthly,by = c("year", "month"))
 
 
 
