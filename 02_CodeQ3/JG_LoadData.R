@@ -8,13 +8,11 @@ library(lubridate)
 library(tidylog)
 library(estimatr)
 library(srvyr) # install.packages("srvyr")
-library(car)
+library(zoo)
 options(scipen=999) # remove scientific notation
 
 ############### Load Data
 df <- read_dta("01_DataQ3/cps_00012.dta") 
-
-vtable(df)
 
 df <- df %>%
   filter(empstat != 1, labforce == 2) %>% # excluding military employment and people not in laborforce
@@ -31,6 +29,11 @@ df <- df %>%
     unemployed = case_when(
       employed == 1 ~ 0, # opposite of employed
       employed == 0 ~ 1),# opposite of employed
+    ageGeneration = case_when(
+      age %in% c(16:22) ~ "Generation Z",
+      age %in% c(23:38) ~ "Millennials",
+      age %in% c(39:54) ~ "Generation X",
+      age %in% c(55:73) ~ "Baby Boomers"),
     highestEduc = case_when(
       educ99 == 1 ~ "no school completed",
       educ99 == 4 ~ "1st - 4th grade",
@@ -86,8 +89,8 @@ df <- df %>%
   filter(yrmo != 20203, year > 2018) %>%
   mutate(
     time = cumsum(c(1,as.numeric(diff(yrmo))!=0))) %>%
-  select(year, month, wtfinl, age, sex, racialCategories, childrenHH, female, married, #asecwt, - when I ran data with this included it was all NA values for this data set, if we use INCTOT variable, we'll need this weight
-         employed, unemployed, highestEduc, covid, time) 
+  select(year, month, wtfinl, ageGeneration, age, sex, racialCategories, childrenHH, 
+         female, married, employed, unemployed, highestEduc, covid, time) 
 
 ######## weight data 
 survey <- 
@@ -109,51 +112,38 @@ monthly_rates <- left_join(employment_monthly, unemployment_monthly, by = c("yea
 #vtable(monthly_rates)
 
 ###### merge monthly rates back into data set
-df_b <- left_join(df, monthly_rates, by = c("year", "month"))
+#df_b <- left_join(df, monthly_rates, by = c("year", "month"))
 
-ggplot(df_b, aes(x = covid*time, y = employment_rate), color = factor(female)) + 
-  geom_point() + 
-  xlab("Monthly Employment Rate") +
-  ylab("Employment Rate") +
-  geom_vline(aes(xintercept=14.5), color = 'blue', linetype='dashed') +
-  theme(axis.text.x = element_blank())
+#ggplot(survey, aes(x = covid*time, y = employment_rate), color = factor(female)) + 
+ # geom_point() + 
+ # xlab("Monthly Employment Rate") +
+ # ylab("Employment Rate") +
+ # geom_vline(aes(xintercept=14.5), color = 'blue', linetype='dashed') +
+ # theme(axis.text.x = element_blank())
 
-############# REGRESSIONS
 
-### Female Regression Results 
-femalereg <- lm_robust(employment ~ female*covid + covid*time, survey)
-export_summs(femalereg, digits = 9, robust = TRUE)
 
-# Regression results + female vs male employment:
-ggplot(data=df_b, 
-       aes(x=covid, y = employment_rate, 
-           group= female, 
-           color=factor(female))) + 
-  geom_line() + 
-  xlab("Covid") + 
-  ylab("Employment Rate") + 
-  scale_color_discrete(name = "Sex", 
-                       labels=c("Male", "Female"))
-
-agereg <- lm_robust(employment_rate ~ age*covid + covid*time, survey)
-export_summs(agereg, digits = 9, robust = TRUE)
-
-racereg <- lm_robust(employment_rate ~ racialCategories*covid + covid*time, survey)
+racereg <- lm_robust(employed ~ racialCategories*covid + covid*time, survey)
 export_summs(racereg, digits = 9, robust = TRUE)
 
-marriedreg <- lm_robust(employment_rate ~ married*covid + covid*time, survey)
+marriedreg <- lm_robust(employed ~ married*covid + covid*time, survey)
 export_summs(marriedreg, digits = 9, robust = TRUE)
 
-educreg <- lm_robust(employment_rate ~ highestEduc*covid + covid*time, survey)
+educreg <- lm_robust(employed ~ highestEduc*covid + covid*time, survey)
 export_summs(educreg, digits = 9, robust = TRUE)
 
-childrenreg <- lm_robust(employment_rate ~ childrenHH*covid + covid*time, survey)
+childrenreg <- lm_robust(employed ~ childrenHH*covid + covid*time, survey)
 export_summs(childrenreg, digits = 9, robust = TRUE)
 
 ####################################################################
-############## Employment & unemployment rates per group ###########
+###################### Employment Per Group ########################
+####################################################################
 
-############## FEMALE
+############## Female Analysis
+femalereg <- lm_robust(employed ~ female*covid + covid*time, survey)
+export_summs(femalereg, digits = 9, robust = TRUE)
+
+### Plot Employment Rates
 ## females v males monthly employment
 female_emp_monthly <- survey %>% 
   group_by(year, month, female) %>% 
@@ -170,8 +160,61 @@ female_unemp_monthly <- survey %>%
 female_rates_monthly <- left_join(female_emp_monthly, female_unemp_monthly,by = c("year", "month"))
 
 
+female_df <- left_join(df, female_rates_monthly, by = c("year", "month"))
 
-############## Married
+vtable(female_df)
+female_df_z <- female_df %>%
+  rename(male_employment_rate = 'employment_rate_0',
+         female_employment_rate = 'employment_rate_1',
+         male_unemployment_rate = 'unemployment_rate_0',
+         female_unemployment_rate = 'unemployment_rate_1',
+         maleHigh = "employment_rate_upp_0",
+         maleLow = "employment_rate_low_0",
+         femaleHigh = "employment_rate_upp_1",
+         femaleLow = "employment_rate_low_1",
+         umaleLow = "unemployment_rate_low_0",
+         ufemaleLow = "unemployment_rate_low_1",
+         umaleHigh = "unemployment_rate_upp_0",
+         ufemaleHigh = "unemployment_rate_upp_1") %>%
+  unite(year_month, c("year", "month"), sep = "-")  %>%
+  mutate(year_month = (Date = as.yearmon(year_month))) %>%
+  mutate(year_month = as.Date(year_month))
+
+
+#Employment rate men V women
+ggplot(female_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = male_employment_rate, color = "men")) + 
+  geom_ribbon(aes(ymax = maleHigh, ymin = maleLow), alpha=0.2) +
+  geom_line(aes(
+    y = female_employment_rate, color = "women")) + 
+  geom_ribbon(aes(ymax = femaleHigh, ymin = femaleLow), alpha=0.2) +
+  labs(title = "Employment Rates For Men and Women", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+#unemployment rate
+ggplot(female_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = male_unemployment_rate, color = "men")) + 
+  geom_ribbon(aes(ymax = umaleHigh, ymin = umaleLow), alpha=0.2) +
+  geom_line(aes(
+    y = female_unemployment_rate, color = "women")) + 
+  geom_ribbon(aes(ymax = ufemaleHigh, ymin = ufemaleLow), alpha=0.2) +
+  labs(title = "Unemployment Rates for Men and Women", 
+       x = "Date", 
+       y = "Unemployment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+############## Married############## Married
 ## married v non-married monthly employment rate
 married_emp_monthly <- survey %>% 
   group_by(year, month, married) %>% 
@@ -188,18 +231,54 @@ married_unemp_monthly <- survey %>%
 married_rates_monthly <- left_join(married_emp_monthly, married_unemp_monthly,by = c("year", "month"))
 
 
-############## Age
+married_df <- left_join(df, married_rates_monthly, by = c("year", "month"))
+
+
+married_df_z <- married_df %>%
+  rename(not_employment_rate = 'employment_rate_0',
+         not_eHigh = "employment_rate_upp_0",
+         not_eLow = "employment_rate_low_0",
+         married_employment_rate = 'employment_rate_1',
+         married_eHigh = "employment_rate_upp_1",
+         married_eLow = "employment_rate_low_1") %>%
+  unite(year_month, c("year", "month"), sep = "-")  %>%
+  mutate(year_month = (Date = as.yearmon(year_month))) %>%
+  mutate(year_month = as.Date(year_month))
+
+
+#Employment rate Married V Not Married
+ggplot(married_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = not_employment_rate, color = "Not Married")) + 
+  geom_ribbon(aes(ymax = not_eHigh, ymin = not_eLow), alpha=0.2) +
+  geom_line(aes(
+    y = married_employment_rate, color = "Married")) + 
+  geom_ribbon(aes(ymax = married_eHigh, ymin = married_eLow), alpha=0.2) +
+  labs(title = "Employment Rates For Married And Not Married People", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+############## Age Analysis 
+agereg <- lm_robust(employed ~ ageGeneration*covid + covid*time, survey)
+export_summs(agereg, digits = 9, robust = TRUE)
+
+### Plot Employment Rates
+## females v males monthly employment
+
 # monthly unemployment rate by age
 age_emp_monthly <- survey %>% 
-  group_by(year, month, age) %>% 
+  group_by(year, month, ageGeneration) %>% 
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>% 
-  pivot_wider(names_from = age, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
+  pivot_wider(names_from = ageGeneration, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
 
 ## monthly unemployment rate by age
 age_unemp_monthly <- survey %>% 
-  group_by(year, month, age) %>% 
+  group_by(year, month, ageGeneration) %>% 
   summarize(unemployment_rate = survey_mean(unemployed, vartype = "ci")) %>% 
-  pivot_wider(names_from = age, values_from = c(unemployment_rate,unemployment_rate_low,unemployment_rate_upp))
+  pivot_wider(names_from = ageGeneration, values_from = c(unemployment_rate,unemployment_rate_low,unemployment_rate_upp))
 
 ## join data
 age_rates_monthly <- left_join(age_emp_monthly, age_unemp_monthly,by = c("year", "month"))
@@ -255,7 +334,39 @@ child_unemp_monthly <- survey %>%
   pivot_wider(names_from = childrenHH, values_from = c(unemployment_rate,unemployment_rate_low,unemployment_rate_upp))
 
 ## join data
-educ_rates_monthly <- left_join(child_emp_monthly, child_unemp_monthly, by = c("year", "month"))
+child_rates_monthly <- left_join(child_emp_monthly, child_unemp_monthly, by = c("year", "month"))
+
+
+
+child_df <- left_join(df, child_rates_monthly, by = c("year", "month"))
+
+
+child_df_z <- child_df %>%
+  rename(no_employment_rate = 'employment_rate_0',
+         no_High = "employment_rate_upp_0",
+         no_Low = "employment_rate_low_0",
+         child_employment_rate = 'employment_rate_1',
+         child_High = "employment_rate_upp_1",
+         child_eLow = "employment_rate_low_1") %>%
+  unite(year_month, c("year", "month"), sep = "-")  %>%
+  mutate(year_month = (Date = as.yearmon(year_month))) %>%
+  mutate(year_month = as.Date(year_month))
+
+
+#Employment rate Married V Not Married
+ggplot(child_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = no_employment_rate, color = "No Children in HH")) + 
+  geom_ribbon(aes(ymax = no_High, ymin = no_Low), alpha=0.2) +
+  geom_line(aes(
+    y = child_employment_rate, color = "Children in HH")) + 
+  geom_ribbon(aes(ymax = child_High, ymin = child_eLow), alpha=0.2) +
+  labs(title = "Employment Rates For People living In Households With Children And Without Children", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
 
 
 
