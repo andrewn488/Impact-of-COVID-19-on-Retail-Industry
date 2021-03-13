@@ -111,8 +111,6 @@ monthly_rates <- left_join(employment_monthly, unemployment_monthly, by = c("yea
 ###### merge monthly rates back into data set
 df_b <- left_join(df, monthly_rates, by = c("year", "month"))
 
-df_b <- 
-
 ggplot(df_b, aes(x = covid*time, y = employment_rate), color = factor(female)) + 
   geom_point() + 
   xlab("Monthly Employment Rate") +
@@ -123,7 +121,7 @@ ggplot(df_b, aes(x = covid*time, y = employment_rate), color = factor(female)) +
 ############# REGRESSIONS
 
 ### Female Regression Results 
-femalereg <- lm(Iemployment_rate ~ female*covid + covid*time, df)
+femalereg <- lm_robust(employment ~ female*covid + covid*time, survey)
 export_summs(femalereg, digits = 9, robust = TRUE)
 
 # Regression results + female vs male employment:
@@ -137,19 +135,19 @@ ggplot(data=df_b,
   scale_color_discrete(name = "Sex", 
                        labels=c("Male", "Female"))
 
-agereg <- lm(employment_rate ~ age*covid + covid*time, df_b)
+agereg <- lm_robust(employment_rate ~ age*covid + covid*time, survey)
 export_summs(agereg, digits = 9, robust = TRUE)
 
-racereg <- lm(employment_rate ~ racialCategories*covid + covid*time, df_b)
+racereg <- lm_robust(employment_rate ~ racialCategories*covid + covid*time, survey)
 export_summs(racereg, digits = 9, robust = TRUE)
 
-marriedreg <- lm(employment_rate ~ married*covid + covid*time, df_b)
+marriedreg <- lm_robust(employment_rate ~ married*covid + covid*time, survey)
 export_summs(marriedreg, digits = 9, robust = TRUE)
 
-educreg <- lm(employment_rate ~ highestEduc*covid + covid*time, df_b)
+educreg <- lm_robust(employment_rate ~ highestEduc*covid + covid*time, survey)
 export_summs(educreg, digits = 9, robust = TRUE)
 
-childrenreg <- lm(employment_rate ~ childrenHH*female + childrenHH*covid + female*covid + covid*time, df_b)
+childrenreg <- lm_robust(employment_rate ~ childrenHH*covid + covid*time, survey)
 export_summs(childrenreg, digits = 9, robust = TRUE)
 
 ####################################################################
