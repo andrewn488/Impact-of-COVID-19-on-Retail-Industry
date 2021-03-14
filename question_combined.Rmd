@@ -1,0 +1,238 @@
+---
+title: "q1_Glen_input"
+author: "Glen Lewis"
+date: "3/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo=FALSE, message=FALSE}
+#library build
+
+library(tidyverse)
+library(jtools)
+library(vtable)
+library(haven)
+library(lubridate)
+library(estimatr)
+library(car)
+
+# following code establishes a function to convert variable class()
+
+class_conversion <- function(df, x, y){
+  'str_prefix' = x
+  'new_class' = y
+  df %>% mutate(across(starts_with(str_prefix), new_class))
+}
+
+# data load
+
+base_emp_data <- read_dta('01_raw_data/cps_00007.dta')
+base_closure_data <- read.csv('01_raw_data/state_lockdown_data.csv')
+base_state_covid_history_data <- read.csv('01_raw_data/all-states-history.csv')
+base_google_trends_data <- read.csv('01_raw_data/multiTimeline.csv')
+```
+
+
+```{r, echo=FALSE, message=FALSE}
+# data wrangling ----
+
+# following code begins by filtering out 'whyunemp == 0' which is used to 
+# catalog those in the military or government service.  
+# it then selects the desired variables. It begins by filtering the data
+# keeping only data for people who report a retail occupations (47xx), 
+# then filters 'whyunemp == 1,2,3' which correspond to unemployment due to 
+# layoffs, ending of temporary work, and general lose of work.  
+# It converts the variables 'occ2010', 'covidunaw' and 'whyunemp' 
+# from class(numeric) to class(factor).
+
+wip_emp_data <- base_emp_data %>% filter(!(whyunemp == 0)) %>% 
+  filter(occ2010 %in% c(4700:5790)) %>% 
+  filter(whyunemp %in% c(1,2,3)) %>% 
+  class_conversion(c('month', 'durunemp', 'statefip'), as.numeric) %>% 
+  class_conversion(c('occ', 'covidunaw', 'whyunemp'), as.factor) %>% 
+  select(-'serial')
+
+# following code tidies up the data by converting the factor levels in 'whyunemp' 
+# and 'covidunaw' to individual variables with the observation being the 
+# total number of 'whyunemp', 'covidunaw' reported for the month.  It then 
+# removes the base columns. 
+
+exploration_base_employment_df <- wip_emp_data %>% 
+  group_by(year, month, statefip) %>% 
+  mutate(layoff = sum(whyunemp == 1), 
+         other_type_loss = sum(whyunemp == 2), 
+         temp_job_end = sum(whyunemp == 3), 
+         covidunaw = sum(covidunaw == 2)) %>% 
+  mutate(covid_impact_no = sum(covidunaw == 1), 
+         covid_impact_yes = sum(covidunaw == 2)) %>% 
+  select(-'whyunemp', -'covidunaw', -'occ2010', -'empstat') %>% 
+  summarise(layoff = sum(layoff), 
+            other_type_loss = sum(other_type_loss), 
+            temp_job_end = sum(temp_job_end), 
+            covid_impact_yes = sum(covid_impact_yes), 
+            covid_impact_no = sum(covid_impact_no)) %>% 
+  mutate(survey_dates = ymd(paste0(year, '-', month, '-01'))) %>% 
+  left_join(base_closure_data, 'statefip') %>% 
+  select(-'lck_dwn_st')
+
+# state stay at home data wrangling
+# converts base_closure_data variable 'lck_dwn_st' from class(character) to class(date)
+
+wip_state_closures <- base_closure_data %>% 
+  mutate(lck_dwn_st = mdy(lck_dwn_st))
+
+state_name_key <- read.csv('01_raw_data/state_names.csv')
+
+state_name_key <- state_name_key %>% select(-'Abbrev') %>% 
+  rename(state_code = Code)
+
+exploration_base_state_covide_df <- base_state_covid_history_data %>% 
+  filter(!(state %in% c('AS', 'GU', 'MP','PR'))) %>% 
+  rename(state_code = state) %>% 
+  mutate(date = mdy(date)) %>% 
+  mutate(date = ymd(date)) %>% 
+  left_join(state_name_key, 'state_code') %>% 
+  rename(state = 'State')
+  
+  # google trends wrangling
+
+wip_google_trends <- base_google_trends_data %>% 
+  mutate(Week = mdy(Week)) %>% mutate(Week = ymd(Week)) %>% 
+  rename(date = Week)
+
+```
+
+H~O~ = COVID-19 did not have an impact on the retail industry as measured by unemployment.
+H~A~ = COVID-19, in the form of state stay at home orders (SAH), negatively impacted the retail industry's health as measured by unemployment. 
+
+Assumption 1: Increases in unemployment can be associated with a decline in the retail industry's health. As revenues decrease a retailer's ability to "carry" larger numbers of employees is reduced.
+
+```{r}
+# following code  builds a df with the variables of interest: state, layoffs, 
+# closure dates. Year and month variables are retained for potential group_by()
+# function.  
+
+state_closure_layoff_df <- exploration_base_employment_df %>% 
+  select('state', 'month', 'year', 'layoff') %>% 
+  left_join(wip_state_closures, 'state')
+
+# model of SAH order start dates and layoffs. The state variable is a fixed effects LSDV.
+
+lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st + factor(state), 
+                                        data = state_closure_layoff_df)  
+
+export_summs(lm_state_closure_layoff_df, model.names = 'Relationship Between \nLayoffs and SAH')
+```
+
+There model appears to show that there is no relationship between layoffs and SAH order start days. The following plots layoffs, growth in total covid cases, and the date of the first SAH. 
+
+```{r, echo = FALSE, message = FALSE}
+# visualizations: the following code does some specific data wrangling
+# and produces some initial data visualizations. The wrangling includes 
+# standardizing of all the variables then merged into a single dataframe. 
+
+wip_emp_mod_1 <- exploration_base_employment_df %>% 
+  rename(date = 'survey_dates') %>% 
+  filter(date >= as.Date('2019-12-01')) %>% 
+  select('date', 'layoff', 'year', 'month') %>% 
+  group_by(date) %>% 
+  summarise(monthly_av_layoff = mean(layoff)) %>% 
+  mutate(yearly_av_layoff = mean(monthly_av_layoff),
+         monthly_sd = sd(monthly_av_layoff),
+         monthly_std_layoff = (monthly_av_layoff - yearly_av_layoff)/monthly_sd)
+
+wip_state_covid_history_mod_1 <- exploration_base_state_covide_df %>% 
+  filter(date >= as.Date('2019-12-01')) %>% 
+  mutate(year = year(date), month = month(date)) %>% 
+  group_by(year, month) %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  summarise(national_monthly_positive = sum(positive)) %>% 
+  mutate(mean_positive = mean(national_monthly_positive), 
+         positive_sd = sd(national_monthly_positive), 
+         std_monthly_positive = (national_monthly_positive - mean_positive)/positive_sd, 
+         date = ymd(paste0(year, '-', month, '-01')))
+
+base_layoff_covid_cases <- wip_emp_mod_1 %>% 
+  left_join(wip_state_covid_history_mod_1, by = c('date'))
+
+ggplot(base_layoff_covid_cases) + 
+  geom_smooth( aes(x =date, y = monthly_std_layoff, colour = "Layoffs"), se = FALSE) + 
+  geom_smooth(aes(x = date, y = std_monthly_positive, colour = 'Total COVID \nCases'), se = FALSE) +
+  xlim(as.Date('2019-12-01'), as.Date('2021-01-01')) +
+  geom_vline(xintercept = as.Date("2020-03-18"), color = 'black') +
+  labs(colour = "Legend, \nStandardized Values") +
+  ggtitle('Layoff Trends v. Total COVID Cases v. Start of SAH Orders') +
+  xlab('Date') + 
+  ylab('Standard Deviations \nLayoffs and Cases') +
+  geom_text(aes(x = as.Date("2020-03-01"), label = "\n1st SAH Order", y=-2.0), colour="black", 
+            angle=90, text=element_text(size=4))
+```
+
+The plot shows that layoffs in the retail sector appear to have on a steep climb, showing a significant decline in the health of the retail sector, before the first SAH order and before covid-19 totals cases had become significant.  Another variable must have been influencing the rapid decline in the retail industry's health.
+
+Following up on a study that assessed social media's affect on creating a "Pandemic Panic", 
+we decided to see if Google Search trends for the term 'covid' had a relationship with layoffs.
+
+```{r, echo = FALSE}
+# following code standardizes google trends then joins it with the layoff and covid total cases which have already been standardized.
+
+wip_layoff_google_trends <- wip_google_trends %>% 
+  filter(!(Covid...United.States.) == '<1') %>% 
+  filter(date >= as.Date('2019-12-01')) %>% 
+  mutate(year = year(date), month = month(date)) %>% 
+  group_by(year, month) %>% 
+  class_conversion('Covid...United.States.', as.numeric) %>% 
+  summarise(monthly_trend_mean = mean(Covid...United.States.), 
+            trend_sd = sd(Covid...United.States.)) %>% 
+  mutate(yearly_mean = mean(monthly_trend_mean), 
+         monthly_trend_sd = sd(monthly_trend_mean), 
+         std_month_score = (monthly_trend_mean - yearly_mean)/monthly_trend_sd,
+         date = ymd(paste0(year, '-', month, '-01')))
+
+wip_layoff_covid_cases_google_trends_df <- wip_emp_mod_1 %>% 
+  left_join(wip_state_covid_history_mod_1, 'date') %>% 
+  left_join(wip_layoff_google_trends, 'date')
+
+# following visualization plots layoffs, v. totals covid cases, v. google searches for covid. Also includes the first SAH order, and FDA emergency authorization to the first coivid vaccines.
+
+ggplot(wip_layoff_covid_cases_google_trends_df) + 
+  geom_smooth( aes(x =date, y = monthly_std_layoff, colour = "Layoffs"), se = FALSE) + 
+  geom_smooth(aes(x = date, y = std_month_score, colour = 'Google COVID \nSearch Trends'), se = FALSE) +
+  geom_smooth(aes(x = date, y = std_monthly_positive, colour = 'Total COVID \nCases'), se = FALSE) +
+  xlim(as.Date('2019-12-01'), as.Date('2021-01-01')) +
+  geom_vline(xintercept = as.Date("2020-03-18"), color = 'black') +
+  geom_vline(xintercept = as.Date("2020-12-18"), color = 'orange') +
+  geom_vline(xintercept = as.Date("2020-12-11"), color = 'orange') + 
+  labs(colour = "Legend, \nStandardized Values") +
+  ggtitle('Google COVID Search Trends v. Retail Layoffs v. Total COVID Cases') +
+  xlab('Date') + 
+  ylab('Standard Deviations') +
+  geom_text(aes(x=as.Date("2020-03-01"), label="\n1st SAH Order", y=-1.75), colour="black", 
+            angle=90, text=element_text(size=4)) +
+  geom_text(aes(x=as.Date("2020-12-01"), label="Vaccine Authorizations", y=-1.5), colour="orange", 
+            angle=90, text=element_text(size=4))
+
+```
+The plot appears to show a potential relationship between ggogle search trends and layoffs.
+```{r}
+lm_gtrend_ccases_layoffs <-  lm( monthly_std_layoff ~ std_month_score +
+                             std_monthly_positive, data = wip_layoff_covid_cases_google_trends_df)
+
+export_summs(lm_gtrend_ccases_layoffs, 
+             model.names = 'Layoff v. Covid Search Trends v. Total Cases')
+
+effect_plot(lm_gtrend_ccases_layoffs, std_month_score, plot.points = TRUE, 
+            x.label = 'Google Search Trends (Standardized)', 
+            y.label =  'Layoffs (Standardized)',
+            point.color = 'blue2', 
+            main.title = 'Layoff v. Covid Search Trends v. Total Cases')
+```
+
+
+
+

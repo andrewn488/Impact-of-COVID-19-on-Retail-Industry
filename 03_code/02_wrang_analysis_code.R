@@ -1,5 +1,37 @@
 # the effects of covid on the retail industry's health ----
 
+# initial H0 = COVID did not impact retail industry health and measured by unemployment.
+# initial HA = COVID related measures - specifically stay at home orders (SAH) impacted
+# the retail industries health.
+
+# following code  builds a df with the variables of interest: state, layoffs, 
+# closure dates. Year and month variables are retained for potential group_by()
+# function. 
+
+state_closure_layoff_df <- wip_emp_data %>% 
+  select('state', 'month', 'year', 'layoff') %>% 
+  left_join(wip_state_closures, 'state')
+
+# model of SAH order start dates and layoffs.  
+
+lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st + factor(state), 
+                                        data = state_closure_layoff_df)  
+
+export_summs(lm_state_closure_layoff_df) # no relationship between layoffs and SAH 
+# order start dates.
+
+state_covid_cases_layoff_df <- wip_emp_data %>% 
+  select('state', 'month', 'year', 'layoff')
+
+state_covid_cases_layoff_df <-  base_state_covid_history_data %>% 
+  select('date', 'state', 'positive') %>% 
+  mutate(date = mdy(date)) %>% 
+  mutate(date = ymd(date)) %>% 
+  left_join(state_covid_cases_layoff_df, 'state') 
+
+
+
+
 # follow-up visualizations of layoff, covid-19 cases, and google search trends for covid ----
 
 # visualizations: the following code does some specific data wrangling
@@ -19,8 +51,8 @@ wip_layoff_google_trends <- wip_google_trends %>%
          std_month_score = (monthly_trend_mean - yearly_mean)/monthly_trend_sd,
          date = ymd(paste0(year, '-', month, '-01')))
          
-wip_emp_data_trend_mod <- wip_emp_data %>% 
-  rename(layoff = 'sum(layoff)', date = 'survey_dates') %>% 
+wip_emp_mod_1 <- exploration_base_employment_df %>% 
+  rename(date = 'survey_dates') %>% 
   filter(date >= as.Date('2019-12-01')) %>% 
   select('date', 'layoff', 'year', 'month') %>% 
   group_by(date) %>% 
@@ -29,11 +61,9 @@ wip_emp_data_trend_mod <- wip_emp_data %>%
          monthly_sd = sd(monthly_av_layoff),
          monthly_std_layoff = (monthly_av_layoff - yearly_av_layoff)/monthly_sd)
 
-wip_state_covid_history_mod <- base_state_covid_history_data %>% 
+wip_state_covid_history_mod_1 <- base_state_covid_history_data %>% 
   select('date', 'state', 'positive') %>% 
-  mutate(date = mdy(date)) %>% 
-  mutate(date = ymd(date)) %>% 
-  filter(!(state == 'AS'), date >= as.Date('2019-12-01')) %>% 
+  filter(date >= as.Date('2019-12-01')) %>% 
   mutate(year = year(date), month = month(date)) %>% 
   na.omit() %>% 
   group_by(year, month) %>% 
@@ -43,9 +73,9 @@ wip_state_covid_history_mod <- base_state_covid_history_data %>%
          std_monthly_positive = (national_monthly_positive - mean_positive)/positive_sd, 
          date = ymd(paste0(year, '-', month, '-01')))
 
-base_layoff_gtrends_covid_cases <- wip_emp_data_trend_mod %>% 
+base_layoff_gtrends_covid_cases <- wip_emp_mod_1 %>% 
   left_join(wip_layoff_google_trends, 'date') %>% 
-  left_join(wip_state_covid_history_mod)
+  left_join(wip_state_covid_history_mod_1)
   
 ggplot(base_layoff_gtrends_covid_cases) + 
   geom_smooth( aes(x =date, y = monthly_std_layoff, colour = "Layoffs"), se = FALSE) + 
@@ -63,13 +93,11 @@ ggplot(base_layoff_gtrends_covid_cases) +
             angle=90, text=element_text(size=4)) +
   geom_text(aes(x=as.Date("2020-12-01"), label="Vaccine Authorizations", y=-1.5), colour="orange", 
             angle=90, text=element_text(size=4))
- 
-#legend 
 
 # following code analyzes potential relationship between google search trends, 
 # covid cases and layoffs ----
 
-lm_gtrend_ccases_layoffs <-  lm( monthly_std_layoff ~ std_month_score +
+lm_gtrend_ccases_layoffs <-  lm_robust( monthly_std_layoff ~ std_month_score +
                              std_monthly_positive, data = base_layoff_gtrends_covid_cases)
 
 export_summs(lm_gtrend_ccases_layoffs, 
@@ -81,6 +109,47 @@ effect_plot(lm_gtrend_ccases_layoffs, std_month_score, plot.points = TRUE,
             point.color = 'blue2', 
             main.title = 'Layoff v. Covid Search Trends v. Total Cases')
 
+# following code will use a fixed effects model 
+
+wip_emp_data_mod_2 <- wip_emp_data %>% 
+  rename(date = 'survey_dates') %>% 
+  filter(date >= as.Date('2020-01-01')) %>% 
+  select('date', 'state', 'layoff', 'year', 'month') %>% 
+  group_by(state, year, month) %>% 
+  summarise(layoff = sum(layoff)) %>% 
+  mutate(date = ymd(paste0(year, '-', month, '-01')))
+  
+base_state_layoff_gtrends <- wip_emp_data_mod_2 %>% 
+  full_join(wip_layoff_google_trends, 'date')
+
+lm_state_layoff_gtrends <-  lm_robust(layoff ~ std_month_score + factor(state), 
+                                       data = base_state_layoff_gtrends)
+
+export_summs(lm_state_layoff_gtrends, 
+             model.names = 'TBD')
+
+
+
+wip_state_covid_history_mod_2 <- base_state_covid_history_data %>% 
+  select('date', 'state', 'positive') %>% 
+  mutate(date = mdy(date)) %>% 
+  mutate(date = ymd(date)) %>%
+  mutate(year = year(date), month = month(date)) %>% 
+  filter(!(state == 'AS'), date >= as.Date('2020-01-01')) %>% 
+  group_by(state, year, month) %>% 
+  summarise(total_cases = sum(positive)) %>% 
+  mutate(date = ymd(paste0(year, '-', month, '-01')))
+
+base_state_layoff_gtrends_case <- wip_emp_data_mod_2 %>% 
+  left_join(wip_layoff_google_trends, 'date') %>% 
+  left_join(wip_state_covid_history_mod_2, 'date')
+
+lm_base_state_layoff_gtrends_case <-  lm_robust(layoff ~ std_month_score + total_cases +
+                                                factor(state.x), 
+                                                data = base_state_layoff_gtrends_case)
+export_summs(lm_base_state_layoff_gtrends_case, 
+             model.names = 'TBD')
+ 
 # DiD wrangling and analysis ----
 # dummy variable build - creating a dummy variable for states that implemented 
 # a stay-at-home order (1) and those states that did not (0)

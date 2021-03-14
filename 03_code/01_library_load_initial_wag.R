@@ -47,20 +47,23 @@ wip_emp_data <- base_emp_data %>% filter(!(whyunemp == 0)) %>%
 # total number of 'whyunemp', 'covidunaw' reported for the month.  It then 
 # removes the base columns. 
 
-wip_emp_data <- wip_emp_data %>% group_by(year, month, statefip) %>% 
-  mutate(layoff = sum(whyunemp == 1), other_type_loss = sum(whyunemp == 2), 
-  temp_job_end = sum(whyunemp == 3), covidunaw = sum(covidunaw == 2)) %>% 
+base_employment_data <- wip_emp_data %>% 
+  group_by(year, month, statefip) %>% 
+  mutate(layoff = sum(whyunemp == 1), 
+         other_type_loss = sum(whyunemp == 2), 
+         temp_job_end = sum(whyunemp == 3), 
+         covidunaw = sum(covidunaw == 2)) %>% 
   mutate(covid_impact_no = sum(covidunaw == 1), 
-  covid_impact_yes = sum(covidunaw == 2)) %>% 
+         covid_impact_yes = sum(covidunaw == 2)) %>% 
   select(-'whyunemp', -'covidunaw', -'occ2010', -'empstat') %>% 
-  summarise(sum(layoff), sum(other_type_loss), sum(temp_job_end), 
-            sum(covid_impact_yes), sum(covid_impact_no))
-
-# following code concatenates year, month variables then adds a day piece, 
-# to create a class(date) variable.
-
-wip_emp_data <- wip_emp_data %>% 
-  mutate(survey_dates = ymd(paste0(year, '-', month, '-01')))
+  summarise(layoff = sum(layoff), 
+            other_type_loss = sum(other_type_loss), 
+            temp_job_end = sum(temp_job_end), 
+            covid_impact_yes = sum(covid_impact_yes), 
+            covid_impact_no = sum(covid_impact_no)) %>% 
+  mutate(survey_dates = ymd(paste0(year, '-', month, '-01'))) %>% 
+  left_join(base_closure_data, 'statefip') %>% 
+  select(-'lck_dwn_st')
 
 # state stay at home data wrangling ----
 
@@ -80,19 +83,11 @@ state_name_key <- state_name_key %>% select(-'Abbrev') %>%
   rename(state_code = Code)
 
 wip_state_covid_history_data <- base_state_covid_history_data %>% 
-  rename(state_code = state) %>% mutate(date = mdy(date))
-
-wip_state_covid_history_data <- wip_state_covid_history_data %>% 
+  rename(state_code = state) %>% mutate(date = mdy(date)) %>% 
   left_join(state_name_key, 'state_code')
 
 # following code wrangles the state covid history, beginning with selecting the 
 # desired variables and removes NA's associated with what appears to be an an error
-
-wip_state_covid_history_data <- wip_state_covid_history_data %>% 
-  rename(state = State) %>% 
-  select('date', 'state', 'positive', 'positiveIncrease','hospitalizedIncrease') %>% 
-  na.omit()
-
 # following code tidies the covid state history data starting with grouping by 
 # state and date then filtering for all data from April 1 2020. The code then 
 # splits and creates a month and year columns to group by then summarizing the 
@@ -100,32 +95,18 @@ wip_state_covid_history_data <- wip_state_covid_history_data %>%
 # a new date column to be used in the join.
 
 wip_state_covid_history_data <- wip_state_covid_history_data %>% 
+  rename(state = State) %>% 
+  select('date', 'state', 'positive', 'positiveIncrease','hospitalizedIncrease') %>% 
+  na.omit() %>% 
+  mutate(month = month(date), year = year(date)) %>%
   group_by(date, state) %>% 
-  summarise(positive, positiveIncrease, hospitalizedIncrease) %>%
-  mutate(month = month(date), year = year(date)) %>% 
-  group_by(state, month, year) %>% 
-  summarise(sum(positive), sum(positiveIncrease), sum(hospitalizedIncrease)) %>% 
-  mutate(date = ymd(paste0(year, '-', month, '-01')))
+  summarise(positive, positiveIncrease, hospitalizedIncrease)
 
 # google trends wrangling ----
 
 wip_google_trends <- base_google_trends_data %>% 
   mutate(Week = mdy(Week)) %>% mutate(Week = ymd(Week)) %>% 
   rename(date = Week)
-
-# base dataframe build----
-
-base_emp_closure_covid_df <- wip_emp_data %>% 
-  rename(date = survey_dates) %>% 
-  left_join(wip_state_closures, 'statefip') %>% 
-  left_join(wip_state_covid_history_data, by = c('state', 'date')) %>% 
-  rename(total_cases = 'sum(positive)', 
-         daily_increase_pos_test = 'sum(positiveIncrease)', 
-         daily_increase_hosp = 'sum(hospitalizedIncrease)', 
-         layoff = 'sum(layoff)', other_type_loss = 'sum(other_type_loss)',
-         temp_job_end = 'sum(temp_job_end)', 
-         covid_impact_yes = 'sum(covid_impact_yes)', 
-         covid_impact_no = 'sum(covid_impact_no)')
 
 
 
