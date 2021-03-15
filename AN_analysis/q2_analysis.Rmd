@@ -14,20 +14,42 @@ source('../AN_code/q2_code.R', local = FALSE)
 ```
 
 
-## Why you are running the analyses you are running
-## Analysis
-### How the analyses answer the question being asked, and what the result is
+# Q2: How has retail fared relative to other industries?
 
-## Carefully interpreting the results
-## Results
-### Presenting the results in an appealing way
+This analysis Start writing all kinds of stuff here...
 
-## Acknowledging the assumptions you are making in each analysis, how plausible those assumptions are in the context of your data, and any evidence you can provide backing up those assumptions
-## Assumptions
+Briefly stated, our results are the following: 
+1)
+2)
+3)
+
+# Variables Used in Data Set
+The 'covid' variable was created by dividing the time of our dataset from April 2020 onwards to signify data 'post-COVID' while data from February 2020 and prior signified data 'pre-COVID'. 
+
+The 'time' variable was created by doing the cumsum...
+
+Industries were provided in the IPUMS data extracted from the IPUMS site. This data was merged with the provided 'indnames.csv' file, with the industry codes mapped to the appropriate industry. We took five variables of interest from the IPUMS dataset: Retail (the main industry of comparison), Arts_Ent_Rec_Accom_Food (Arts, Entertainment, Recreation, Accommodation, and Food industry), FINC_Ins_Real_Estate (Finance, Insurance, and Real Estate industry), Construction (construction industry), and Public_Admin (Public Administration industry). This variable was turned into a factor variable and reorder() was used to get the factors in the correct order to make comparisons in the export_summs table to the Retail industry.
+
+# Assumptions
+The assumption made regarding the Construction industry was that employment in this industry would increase due to office buildings being closed and commutes for non-essential professionals stopping. The assumption was that since less of these activities would be taking place (commuting to work, having to schedule office renovations around the office working schedule, etc.) that the Construction industry would see an uptick. The assumption made regarding the Public Administration industry was to see how the public sector fared the effects of the COVID-19 pandemic versus private sector. 
 
 
-## After doing all analyses related to a given question, provide a generalized answer to the main questions
-## Conclusion
+# Regression
+
+
+```{r}
+export_summs(industry_reg_z, digits = 5, lush = TRUE)
+```
+
+
+# Results
+## include industry_plot and explain
+```{r}
+industry_plot
+```
+
+
+# Conclusion
 
 ```{r cars}
 summary(cars)
