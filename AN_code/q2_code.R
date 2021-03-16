@@ -70,7 +70,7 @@ retail_vs_ind_v2 <- retail_vs_ind %>%
       Public_Admin == 1 ~ "Public_Admin")
   )
 
-# filter out NA's from dataset and make industry a factor variable
+# filter out NA's from data set and make industry a factor variable
 retail_vs_ind_v2 <- retail_vs_ind_v2 %>% 
   filter(industry != "NA") %>% 
   mutate(industry = factor(industry))
@@ -95,7 +95,7 @@ industry_rate <- survey %>%
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>%
   pivot_wider(names_from = industry, values_from = c(employment_rate,employment_rate_low,employment_rate_upp))
 
-# merge datasets:
+# merge data sets:
 merged_df <- left_join(retail_vs_ind_v4, industry_rate, by = c("YEAR", "MONTH"))
 
 # create year_month variable and set type to date
@@ -114,30 +114,9 @@ employment_rate <- survey %>%
 merged_df <- left_join(merged_df, employment_rate, by = c("YEAR", "MONTH")) 
 
 
-########### Industry Analysis ################
-# retail reg
-retail_reg <- lm(employment_rate ~ Retail*covid + covid*time, merged_df)
-
-# arts and stuff reg
-Arts_Ent_Rec_Accom_Food_reg <- lm(employment_rate ~ Arts_Ent_Rec_Accom_Food*covid + covid*time, merged_df)
-
-# construction reg
-construction_reg <- lm(employment_rate ~ Construction*covid + covid*time, merged_df)
-
-# FINC_Ins_Real_Estate reg
-FINC_Ins_Real_Estate_reg <- lm(employment_rate ~ FINC_Ins_Real_Estate*covid + covid*time, merged_df)
-
-# Public_Admin reg
-Public_Admin_reg <- lm(employment_rate ~ Public_Admin*covid + covid*time, merged_df)
-
-# look at the regressions
-export_summs(retail_reg, Arts_Ent_Rec_Accom_Food_reg, construction_reg,
-             FINC_Ins_Real_Estate_reg, Public_Admin_reg, digits = 5,
-             lush = TRUE)
-
+# we finally have the data tidied and in the correct format that we need. time to do analysis:
 # industry reg:
-#  <- lm_robust(employed ~ industry*covid + covid*time, merged_df)
-industry_reg_z <- lm(employment_rate ~ industry*covid + covid*time, merged_df)
+industry_reg_z <- lm(employed ~ industry*covid + covid*time, merged_df)
 
 export_summs(industry_reg_z, digits = 5, lush = TRUE)
 
@@ -170,7 +149,7 @@ industry_plot <- ggplot(merged_df, aes(year_month)) +
   geom_ribbon(aes(ymax = employment_rate_upp_Retail,
                   ymin = employment_rate_low_Retail), alpha=0.2) +
   
-  labs(title = "Employment Rates for Different Industries",
+  labs(title = "Employment Rates for Industries of Interest",
        x = "Date",
        y = "Employment Rate")  +
   
@@ -182,21 +161,3 @@ industry_plot <- ggplot(merged_df, aes(year_month)) +
 
 # look at the plot
 industry_plot
-
-
-
-##### working code - demeaned approach ######
-# demeaned industries
-# merged_df_dm <- merged_df %>% group_by(industry) %>% 
-#  mutate(retail_dm = Retail - mean(Retail),
-#         Arts_Ent_Rec_Accom_Food_dm = Arts_Ent_Rec_Accom_Food - mean(Arts_Ent_Rec_Accom_Food),
-#         Constructin_dm = Construction - mean(Construction),
-#         FINC_Ins_Real_Estate_dm = FINC_Ins_Real_Estate - mean(FINC_Ins_Real_Estate),
-#         Public_Admin_dm = Public_Admin - mean(Public_Admin))
-
-# fe_dm <- lm(employed ~ retail_dm + Arts_Ent_Rec_Accom_Food_dm + Constructin_dm +
-#              FINC_Ins_Real_Estate_dm + Public_Admin_dm, merged_df_dm)
-
-# LSDV: 
-# fe_lsdv <- lm(employed ~ Retail + covid + industry, merged_df)
-# linearHypothesis(fe_lsdv, matchCoefs(fe_lsdv, 'industry'))

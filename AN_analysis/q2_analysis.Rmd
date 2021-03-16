@@ -14,53 +14,59 @@ source('../AN_code/q2_code.R', local = FALSE)
 ```
 
 
-# Q2: How has retail fared relative to other industries?
-
-This analysis Start writing all kinds of stuff here...
+### Introduction
+We have officially been living in a COVID-19 pandemic world for over a full year now. The World Health Organization (WHO) officially declared the spread of COVID-19 as a global pandemic on March 11, 2020. The following research below outlines data utilized from IPUMS Current Population Survey (CPS) to answer the question of: "How has the retail industry fared relative to other industries?". Data analyzed to answer this question ranged from January 2019 to January 2021. See below for further detail on variables used in data set.   
 
 Briefly stated, our results are the following: 
-1)
-2)
-3)
-
-# Variables Used in Data Set
-The 'covid' variable was created by dividing the time of our dataset from April 2020 onwards to signify data 'post-COVID' while data from February 2020 and prior signified data 'pre-COVID'. 
-
-The 'time' variable was created by doing the cumsum...
-
-Industries were provided in the IPUMS data extracted from the IPUMS site. This data was merged with the provided 'indnames.csv' file, with the industry codes mapped to the appropriate industry. We took five variables of interest from the IPUMS dataset: Retail (the main industry of comparison), Arts_Ent_Rec_Accom_Food (Arts, Entertainment, Recreation, Accommodation, and Food industry), FINC_Ins_Real_Estate (Finance, Insurance, and Real Estate industry), Construction (construction industry), and Public_Admin (Public Administration industry). This variable was turned into a factor variable and reorder() was used to get the factors in the correct order to make comparisons in the export_summs table to the Retail industry.
-
-# Assumptions
-The assumption made regarding the Construction industry was that employment in this industry would increase due to office buildings being closed and commutes for non-essential professionals stopping. The assumption was that since less of these activities would be taking place (commuting to work, having to schedule office renovations around the office working schedule, etc.) that the Construction industry would see an uptick. The assumption made regarding the Public Administration industry was to see how the public sector fared the effects of the COVID-19 pandemic versus private sector. 
+The health of the retail industry came in third place in our list of industries of interest. 
 
 
-# Regression
+### Variables Used in Data Set
+The 'covid' variable was created by dividing the time of our dataset from April 2020 onward to signify data 'post-COVID' while data from February 2020 and prior signified data 'pre-COVID'. 
+
+The 'time' variable was created by taking the cumulative sum of the lagged differences of 'yrmo' for YEAR and MONTH combined. 
+
+Industries were provided in the IPUMS data extracted from the IPUMS site. This data was merged with the provided 'indnames.csv' file, with the industry codes mapped to the appropriate industry. We took five variables of interest from the IPUMS dataset: Retail (the main industry of comparison), Arts_Ent_Rec_Accom_Food (Arts, Entertainment, Recreation, Accommodation, and Food industry), FINC_Ins_Real_Estate (Finance, Insurance, and Real Estate industry), Construction (Construction industry), and Public_Admin (Public Administration industry). This variable was turned into a factor variable and reorder() was used to get the factors in the correct order so that comparisons in the export_summs table would be made to the Retail industry.
+
+### Assumptions
+The assumption made regarding the Construction industry was that employment in this industry would increase due to office buildings being closed and commutes for non-essential professionals stopping as employees began working from home. The assumption was that since less of these activities would be taking place (commuting to work, having to schedule office renovations around the office working schedule, etc.) that the Construction industry would see an uptick. 
+
+The Public Administration variable was included to see how the public sector fared the effects of the COVID-19 pandemic versus private sector. The assumption made for this industry was that it would fare better than all other industries. 
+
+Arts, Entertainment, Recreation, Accommodations, and Food industry was assumed to be the harshest impact of the COVID-19 pandemic. Nobody was out shopping in brick and mortar storefronts, going to museums, traveling, or eating out at restaurants anymore. The impact on the health of this industry was assumed to take the hardest hit of the industries chosen.  
 
 
-```{r}
+### Regression
+To answer the question: 'How has retail fared relative to other industries?', the analysis chosen was a multivariate OLS analysis with interaction terms on "covid*industry" and "covid*time". 
+
+The 'covid' variable was created by dividing the time of our data set from April 2020 onward to signify data 'post-COVID' while data from February 2020 and prior signified data 'pre-COVID'. We removed March 2020 from our data set to better divide the two different times. The plot provided below shows a sharp drop in employment rate between February and April 2020. March 2020 was omitted to clearly draw this line. This is also known as the Doughnut hole approach.  
+
+```{r export_summs table, echo=FALSE}
 export_summs(industry_reg_z, digits = 5, lush = TRUE)
 ```
 
+### Results
+The Retail industry is faring in the middle of our industries of interest. The health of the industries as measured in employment rates is ranked as follows: 
+1) Public Administration industry
+2) Finance, Insurance, and Real Estate industry
+3) Retail industry
+4) Construction industry
+5) Arts, Entertainment, Accommodations, and Food industry
 
-# Results
-## include industry_plot and explain
-```{r}
+The analyses answer the question being asked by taking into account the interaction of the 'covid' variable with all industries, compared to the Retail industry. In the shown factor comparison included below, the Retail industry is omitted in the export_summs table because the factors are all being compared to it. The interpretation of these numbers are as follows:
+
+Holding all other variables in the model constant, being employed in the Public Administration industry during the COVID-19 pandemic is associated with approximately 2.3 percentage points higher probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+Holding all other variables in the model constant, being employed in the Finance, Insurance, and Real Estate industry during the COVID-19 pandemic is associated with approximately 1.5 percentage points higher probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+Holding all other variables in the model constant, being employed in the Construction industry during the COVID-19 pandemic is associated with approximately 0.43 percentage points higher probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+Holding all other variables in the model constant, being employed in the Arts, Entertainment, Recreation, Accommodation, and Food industry during the COVID-19 pandemic is associated with approximately 8.1 percentage points lower probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+
+```{r industry_plot, echo=FALSE}
 industry_plot
 ```
 
-
-# Conclusion
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Conclusion
+Through this research, it was found that out of the industries of interest chosen for this analysis, the Retail industry is in the middle. The good news is that the health of the industry has been trending upward since its initial drop in April 2020. Retail replaced Construction as third place out of our five industries. The slowest amount of growth seen has been the Finance, Insurance, and Real Estate industry, but they had one of the least impacted industries of our list. Public Administration maintained consistency with starting as the highest employed industry and ending in the same position after the pandemic hit. It could be inferred that the Public Administration industry is the most stable since it could withstand a global pandemic. 
