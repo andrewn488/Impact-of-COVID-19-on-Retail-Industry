@@ -37,6 +37,33 @@ base_state_covid_history_data <- read.csv('01_raw_data/all-states-history.csv')
 base_google_trends_data <- read.csv('01_raw_data/multiTimeline.csv')
 ```
 
+## Reason for our analysis structure
+
+In our analysis, we look at how COVID impacted the retail industry in terms of unemployment.
+The objective for this analysis was to determine how many people were unemployed last year, if there was an obvious increase, and see if a correlation exists between COVID cases and unemployment. 
+The first thing we did was plot a graph of the total reported unemployment per month. The unemployment data that we looked was collected from November of 2020 to January 2021. We also categorized the unemployment data into “Reason Why” as we wanted to specifically look at where the increase occurred in the following categories: "Laid Off", "Other" and "Temporary Job Ended". By looking at the unemployment data before the first cases were identified in the US, and several months after, we are able to see if total unemployment increased due to COVID.
+We found that in April of 2020 data began to be reported if unemployment was due to COVID and so we also graphed the total amount of reported unemployment per month including that information. We decided to do this to get a visualization of how many of unemployment reports were attributed to COVID. Answering the question, how does COVID impact the retail industry in terms of unemployment.
+Once we could see that 2020 had a large spike of unemployment which was attributed to COVID, we established a hypothesis that covid-19 measures imposed to reduce the spread of the disease was the reason for the impact in the retail industry. Specifically, we looked at stay-at-home orders (SAH). We ran an LSDV model of layoffs and when specific lockdowns happened per state. We did not see a positive relationship between SAH orders and unemployment in the retail industry, so decided to look for another factor that could have caused unemployment. We also found that control for between variations of the states did not impact the relationship.
+ Then, we decided to look at unemployment and cases of COVID. We made a standardized graph showing the unemployment and COVID cases and similarly, found a negative trend where the more reported cases of COVID, the less unemployment reported.
+Finally, since it appeared that COVID cases were not the true reason for unemployment, we looked at other variables that may have caused unemployment. One in particular, Google searches for the term “COVID”, seemed to have a strong positive correlation with unemployment. We ran a linear model of the effect of Google searches and total positive reported COVID cases with unemployment, which was our final model.
+
+## How our analysis answers “How Did COVID Impact the Retail Industry in Terms of Unemployment?”
+
+Our analysis answers this question by first looking at how unemployment changed from before the first cases were identified in the US to months after this date. We saw a sharp increase of unemployment in March, which is when the first case was identified. In addition, we were able to see via a graph that the majority of unemployment cases were due to layoffs and the primary reason being COVID.
+We took this question a bit further in trying to assess why unemployment occurred. We assumed that stay at home orders (SAH) would have led to more unemployment in the retail industry but saw an opposite trend due to return to work shortly after SAH were implemented. We also assumed the number of COVID cases per day would be the primary influencer of unemployment but actually found a negative relationship between COVID cases and unemployment. We did identify a strong positive relationship between Google trends searches and unemployment. This leads us to suspect that unemployment was due to the fear and concern about the pandemic and less about the actual cases.
+We demonstrate that there is an irregular increase in unemployment in 2020 in the retail industry due to COVID, as reported through unemployment reports. We also explore which factors about COVID led to this increase in unemployment.
+
+## Data Set Used for Analysis
+
+To see the unemployment amount in 2020, we collected data from the IPUMS Current Population Survey and specifically looked at work information like industry, employment status and reason why unemployed. We also gathered data from the COVID details that began to be collected in May, which was, “Unable to work due to COVID-19 pandemic”. We narrowed down the industry to be just retail and also only looked at the following reasons for unemployment: "Laid Off", "Other" and "Temporary Job Ended" as we were less interested in those who left their job by choice or if someone was a re-entrant or new entrant. 
+
+
+##Glen, can you please complete this question? Not sure where your data came from.
+
+
+## Interpretation of Regression Results and Presentation of Results
+
+
 The following analysis attempts to identify how COVID-19 affected the health of the retail industry. This analysis uses retail unemployment as a measure of industry health. The assumption is that a healthy retail industry has a consistent flow of revenues enabling it to maintain a uniformed sized employee pool. An unhealthy industry would be characterized by high layoffs rates as retail revenues drop forcing retailers to minimize losses by reducing employee attributed operational costs.
 
 ```{r, echo=FALSE, message=FALSE, warning = FALSE}
@@ -124,11 +151,10 @@ plot_by_why
 
 sum_unemp <- wip_emp_data %>%
   #na_if(99) %>%
-  mutate(date = ymd(paste0(year, '-', month, '-01'))) %>% 
-  count(date, covidunaw) %>%
+  count(survey_dates, covidunaw) %>%
   filter(covidunaw %in% c(1, 2, NA)) %>%
-  filter(date >= "2019-12-01")
-#sum_unemp[is.na(sum_unemp)] <- 0
+  filter(survey_dates >= "2019-11-01")
+sum_unemp[is.na(sum_unemp)] <- 0
 
 plot_total <- ggplot(data = sum_unemp, aes(x = date, y = n, fill = factor(covidunaw))) +
   geom_bar(position = "stack", stat = "identity") +
@@ -146,7 +172,7 @@ H~O~ = COVID-19 did not have an impact on the retail industry as measured by une
 H~A~ = COVID-19, in the form of state stay at home orders (SAH), negatively impacted the retail industry's health as measured by unemployment. 
  The following model 
 
-The following model assessed if there was a relationship between when SAH orders where implemented and unemployment.The original model included a LSDV factor for states to provide a fixed effect control; however, it was discovered that the dummy variable had not impact on the relationship.
+The following model assessed if there was a relationship between when SAH orders where implemented and unemployment.The original model included a LSDV factor for states to provide a fixed effect control; however, it was discovered that the between variation of states had no impact on the relationship.
 ```{r}
 state_closure_layoff_df <- exploration_base_employment_df %>% 
   select('state', 'month', 'year', 'layoff') %>% 
@@ -201,7 +227,7 @@ ggplot(base_layoff_covid_cases) +
             angle=90, text=element_text(size=4))
 ```
 
-Since the model showed that SAH did not have a positive relationship with the decline in the retail industry's health - indicated by increased layoffs - we conducted a review of previous research and found s study that assessed social media's affect on creating a "Pandemic Panic". We decided to follow the paper's hypothesis but assesses if Google Search trends for the term 'covid' had a relationship with layoffs. The following plot shows google searches for covid, layoffs, covid cases and major events such as the first SAH and vaccine emergency authorization. The plot does show that covid search trends did parallel the layoff rates. 
+Since the model showed that SAH did not have a positive relationship with the decline in the retail industry's health - indicated by increased layoffs - we conducted a review of previous research and found a study that assessed social media's affect on creating a "Pandemic Panic". We decided to follow the paper's hypothesis but assesses if Google Search trends for the term 'covid' had a relationship with layoffs. The following plot shows google searches for covid, layoffs, covid cases and major events such as the first SAH and vaccine emergency authorization. The plot does show that covid search trends did parallel the layoff rates. 
 
 ```{r, echo = FALSE}
 
@@ -250,5 +276,20 @@ export_summs(lm_gtrend_ccases_layoffs,
 ```
 This model did show a positive statically signifcant relationship at the .05% confidence interval between increases in google searches for covid and the increase in layoff.  This indicates that covid did potentially impact the retail industry's health but not in the way expect, either through SAH or the growth in cases.  It appear that information about covid found through google searches may have changed the behavior of retail shoppers that lead to a decline in the health of the retail industry as indicated by layoffs.
 
+
+## Assumption Acknowledgement
+
+We are assuming when looking at the relationship of COVID cases and unemployment, that there is a minimal effect on unemployment effecting COVID cases and also Google searches. 
+We also assume the the relationship remains linear.
+
+May need to fill this in more!
+
+## Final Results: “How Did COVID Impact the Retail Industry in Terms of Unemployment?”
+
+Covid did impact the retail industry negatively as we saw a rise in unemployment in 2020.
+
+We see that the retail industry had a large spike in unemployment right around the time that the first positive cases of COVID were being reported in the US. We also see that unemployment was on the rise, even before the stay at home orders were implemented. By the time the stay at home orders were implemented, unemployment had almost peaked and began trending downwards. We also see that unemployment peaked and returned to much lower levels before positive cases actually began to spike upward. Further analysis needs to be completed to control for other potential variables, but our current take away is that Google trends had a positive relationship that was statistically significant in relation to unemployment. Our conclusion is that fear of the pandemic may have been a major cause of unemployment, over the stay at home orders and actuall positive cases.
+
+While the retail industry had high levels of unemployment throughout 2020, the majority of those unemployments were specific to COVID and we see a major decrease in unemployment which remains relatively consistant between October 2020 to January 2021. While unemployment rates in the retail industry have not returned to what it was pre-covid, it is in much better standing compared to the peak in April.
 
 
