@@ -123,7 +123,7 @@ COVID-19 protective measures variable information was draw from numerious state 
 
 We first plotted a graph of the total reported unemployment per month. We narrowed the date range from November 2020 to January 2021, focusing on the time when COVID-19 became a prominent news item. We also categorized the unemployment data into the “reason why” categories to specifically look at which types of unemployment changed. By looking at the unemployment data before Doctors identified the first cases in the US (January 19, 2020) and several months after, we were able to identify unemployment trends potentially due to COVID-19, and the measures implemented to mitigate its spread.
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE}
 sum_by_why <- wip_emp_data %>%
   mutate(date = ymd(paste0(year, '-', month, '-01'))) %>% 
   count(date, whyunemp) %>%
@@ -165,9 +165,8 @@ H~A~ = COVID-19, in the form of state stay at home orders (SAH), negatively impa
 
 The following regression model assessed if there was a relationship between SAH start dates and unemployment. The model included a LSDV factor for states to provide a fixed effect control for collective variables such as politics, which could have influenced COVID-19 policy implementation
 
-####lm_robust(layoff ~ lck_dwn_st + factor(state))
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE}
 state_closure_layoff_df <- exploration_base_employment_df %>% 
   select('state', 'month', 'year', 'layoff') %>% 
   left_join(wip_state_closures, 'state')
@@ -181,7 +180,6 @@ export_summs(lm_state_closure_layoff_df, coefs = 'lck_dwn_st',  model.names = 'R
 The model did not show a statistically significant relationship between the SAH start dates and unemployment rates. This is not surprising as the plot shows layoffs began to decline soon after the first SAH orders. The IPMUS variable “covid_impact” also reflects that trend (see above).  Starting in April 2020, IPMUS began asking respondents to report if their unemployment was attributable to COVID. That variable also saw a decline mirroring that of unemployment due to layoffs following the first SAH. 
 
 Thus, SAH appears not to have had a negative impact on the retail sector. To understand what may have led to the sudden increase in unemployment - and decay in the retail sector's health - that occurred at the beginning of the year we decided to look for another factor: the rise in COVID-19 cases.
-
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 
 wip_emp_mod_1 <- exploration_base_employment_df %>% 
@@ -207,7 +205,9 @@ wip_state_covid_history_mod_1 <- exploration_base_state_covide_df %>%
 
 base_layoff_covid_cases <- wip_emp_mod_1 %>% 
   left_join(wip_state_covid_history_mod_1, by = c('date'))
+```
 
+```{r, message = FALSE, warning = FALSE}
 base_layoff_covid_cases_lm <- lm_robust(monthly_std_layoff ~ std_monthly_positive,
                                         data = base_layoff_covid_cases)
 export_summs(base_layoff_covid_cases_lm, model.names = 'Relationship Between \nLayoffs and COVID-19 Cases')
@@ -228,7 +228,6 @@ ggplot(base_layoff_covid_cases) +
 The new model showed a negative relationship between layoffs and cases.  We could interpret this as the retail industry's health improving as COVID-19 cases rose.  Whether there is relationship present or not the plot does show a decline in unemployment while cases were still rising.    
 
 We then conducted a review of previous research and found a study assessing social media's effect on creating a "Pandemic Panic" [^1]. We decided to follow the paper's hypothesis but assessing if Google Search trends for the term 'covid' had a relationship with layoffs. The following plot shows google searches for covid, layoffs, covid cases and major events such as the first SAH and vaccine emergency authorization. The plot does show that covid search trends did parallel the layoff rates.
-
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 
 wip_layoff_google_trends <- wip_google_trends %>% 
@@ -252,7 +251,9 @@ cor_1 <- wip_layoff_covid_cases_google_trends_df %>%
   filter(!(date == as.Date('2019-12-01'))) 
 
 cor(cor_1$monthly_std_layoff, cor_1$std_month_score)
+```
 
+```{r, message = FALSE, warning = FALSE}
 ggplot(wip_layoff_covid_cases_google_trends_df) + 
   geom_smooth( aes(x =date, y = monthly_std_layoff, colour = "Layoffs"), se = FALSE) + 
   geom_smooth(aes(x = date, y = std_month_score, colour = 'Google COVID \nSearch Trends'), se = FALSE) +
@@ -271,10 +272,9 @@ ggplot(wip_layoff_covid_cases_google_trends_df) +
             angle=90, text=element_text(size=4))
 
 ```
-
 Since Google searches for the term “COVID” seemed to have a positive correlation (0.12) with unemployment, we decided to run a linear model of the effect of Google searches and total positive reported COVID cases with unemployment, which was our final model.
 
-```{r, echo = FALSE}
+```{r}
 lm_gtrend_ccases_layoffs <-  lm_robust( monthly_std_layoff ~ std_month_score +
                              std_monthly_positive, data = wip_layoff_covid_cases_google_trends_df)
 
