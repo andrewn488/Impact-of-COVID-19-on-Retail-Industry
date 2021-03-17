@@ -262,42 +262,30 @@ Figure 5.
 
 Above in Figure 5, when quarantine started due to COVID-19 in the US, which was in March 2020, there is an immediate decline in employment between individuals of all racial backgrounds. The hardest hit group were individuals with an American Indian/ Aleut/ and Eskimo background. With the latest 2021 data, it looks like racially, all the different groups are around the same employment rate, ranging between .85 and .95. 
 
-To further this analysis, we wanted to depict another way to show how the employment rates have changed by looking at a snapshot of the data from January 2020 and January 2021. We chose this because this we looked at specific employment rates across different racial groups. 
 
-Below is a pie chart which shows a snapshot of employment per racial category in January 2020 and January 2021. 
-
-```{r, echo=FALSE}
-fig1
-```
-
-```{r, echo=FALSE}
-fig2
-```
-
-# Assumption Acknowledement
+# Assumption Acknowledgement
 The linear probability regression model used for each regression model of our analysis assumes that the probability of our outcome is a linear function of the regressors, when in reality we must acknowledge that the true relationship between a binary outcome, in our case: being employed or not being employed, and the binary or categorical explanatory variable used in our models as the variable of interest are going to have an inherently nonlinear relationship. In an effort to best accommodate this assumption violation, we have provided supplemental visuals where employment rate is being used as a substitute for the employed outcome variable in our linear probability regression models.
 
 Gender Analysis:
 One assumptions for this analysis is that people can only be a gender of male or female. There was no data collected for people who identify as non-binary or any other sexual orientation in the IPUMS CPA data, so there would have been means for us to account for those respondents who identify as anything other than male or female in this analysis.
 
 Marriage Status Analysis:
-We grouped people who are married, but do not live with their spouse under the classification of not being married. This might have been an erronious assignment on our part, but it was our assumption that people who are living in other separately, but married might have a spouse in another country and are otherwise living as a single person. From this analysis we wanted to determine if people who are married, in the traditional sense, were more impacted by COVID-19 than single people in regard to their employment status and so we categorized people who are married, but living seperately accordingly.
+We grouped people who are married, but do not live with their spouse under the classification of not being married. This might have been an erroneous assignment on our part, but it was our assumption that people who are living in other homes separately, but married might have a spouse in another country and are otherwise living as a single person. From this analysis we wanted to determine if people who are married, in the traditional sense, were more impacted by COVID-19 than single people in regard to their employment status and so we categorized people who are married, but living separately accordingly.
 
 Age Generation Analysis:
-Another assumption we made was that people who are employed are actually people who are working in the traditional sense, but there could be plenty of older people included in our data set whose employment status was not affected by the COVID-19 pandemic because they are working by title alone. By this we mean, there could be people who are owners or presidents of companies who do not have an active day-to-day role in the operations of the business and would not be laid off even if layoffs were occouring at their company because they hold such a valuable, high up position in the company.
+Another assumption we made was that people who are employed are actually people who are working in the traditional sense, but there could be plenty of older people included in our data set whose employment status was not affected by the COVID-19 pandemic because they are working by title alone. By this there could be people who are owners or presidents of companies who do not have an active day-to-day role in the operations of the business and would not be laid off even if layoffs were occuring at their company because they hold such a valuable, high up position in the company.
 
 Another assumption we made for this analysis was that everyone in each generation is the same. By categorizing individuals into their respective age generation category, we may have failed to account for the nuanced, yearly age level effects this pandemic may have had on the employment status for people with different inner-group ages.
 
 Highest Educational Attainment Analysis:
-Similar to the second assumption for Age, we grouped highest educational attainment into six seperate buckets when the original IPUMS CPA data extract had 18 uniquely coded values for different levels of educational attainment. By grouping educational attainment as we have we may have missed out on the nuanced, individual education level effects this pandemic may have had on the employment status for people with different inner-group education levels.
-
+Similar to the second assumption for Age, we grouped highest educational attainment into six separate buckets when the original IPUMS CPA data extract had 18 uniquely coded values for different levels of educational attainment. By grouping educational attainment as we have, we may have missed out on the nuanced, individual education level effects this pandemic may have had on the employment status for people with different inner-group education levels.
 
 Racial Category Analysis:
 Finally, for the racial category analysis, we made the same grouped assumption as the previous analysis where we bucketed anyone who identified as more than one unique racial group in their response for the "race" variable in the IPUMS CPA data into a "Mixed" race category. By doing this we once again may have missed out on the nuanced, individual multi-race level effects this pandemic may have had on the employment status for people who are different inner-group races.
 
 # General Answer to "Who has money to spend?"
 Briefly stated, on average as of 2021 the following are our conclusions: 
-1)Women are working more than men.
+1) Women are working more than men.
 
 2) Married people are working more than non-married people. 
 
@@ -312,7 +300,6 @@ People who graduated High School are working more than people with below a High 
 5) White people are working more than Asian people.
 Asian people are working more than Hawaiian/ Pacific Islanders, Black people, and people with a Mixed race.
 American Indian/Aleut/Eskimo people are working the least.
-
 
 We found supporting evidence for each of these claims as shown in Figures 1 - 5 above showing average employment rates per grouping for each of the demographic variables evaluated in this analysis.
 
