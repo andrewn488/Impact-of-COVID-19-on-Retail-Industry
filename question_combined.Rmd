@@ -1,6 +1,6 @@
 ---
-title: "q1_Glen_input"
-author: "Glen Lewis"
+title: "How has COVID affected the health of the retail industry, as measured by employment?"
+author: "Mikayla Davis, Glen Lewis"
 date: "3/14/2021"
 output: html_document
 ---
@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 #library build
 
 library(tidyverse)
@@ -37,30 +37,18 @@ base_state_covid_history_data <- read.csv('01_raw_data/all-states-history.csv')
 base_google_trends_data <- read.csv('01_raw_data/multiTimeline.csv')
 ```
 
+The following analysis attempts to identify how COVID-19 affected the health of the retail industry. This analysis uses retail unemployment as a measure of industry health. The assumption is that a healthy retail industry has a consistent flow of revenues enabling it to maintain a uniformed sized employee pool. An unhealthy industry would be characterized by high layoffs rates as retail revenues drop forcing retailers to minimize losses by reducing employee attributed operational costs.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
 # data wrangling ----
 
-# following code begins by filtering out 'whyunemp == 0' which is used to 
-# catalog those in the military or government service.  
-# it then selects the desired variables. It begins by filtering the data
-# keeping only data for people who report a retail occupations (47xx), 
-# then filters 'whyunemp == 1,2,3' which correspond to unemployment due to 
-# layoffs, ending of temporary work, and general lose of work.  
-# It converts the variables 'occ2010', 'covidunaw' and 'whyunemp' 
-# from class(numeric) to class(factor).
-
-wip_emp_data <- base_emp_data %>% filter(!(whyunemp == 0)) %>% 
+wip_emp_data <- base_emp_data %>% 
+  filter(!(whyunemp == 0)) %>% 
   filter(occ2010 %in% c(4700:5790)) %>% 
   filter(whyunemp %in% c(1,2,3)) %>% 
   class_conversion(c('month', 'durunemp', 'statefip'), as.numeric) %>% 
   class_conversion(c('occ', 'covidunaw', 'whyunemp'), as.factor) %>% 
   select(-'serial')
-
-# following code tidies up the data by converting the factor levels in 'whyunemp' 
-# and 'covidunaw' to individual variables with the observation being the 
-# total number of 'whyunemp', 'covidunaw' reported for the month.  It then 
-# removes the base columns. 
 
 exploration_base_employment_df <- wip_emp_data %>% 
   group_by(year, month, statefip) %>% 
@@ -79,9 +67,6 @@ exploration_base_employment_df <- wip_emp_data %>%
   mutate(survey_dates = ymd(paste0(year, '-', month, '-01'))) %>% 
   left_join(base_closure_data, 'statefip') %>% 
   select(-'lck_dwn_st')
-
-# state stay at home data wrangling
-# converts base_closure_data variable 'lck_dwn_st' from class(character) to class(date)
 
 wip_state_closures <- base_closure_data %>% 
   mutate(lck_dwn_st = mdy(lck_dwn_st))
@@ -107,31 +92,74 @@ wip_google_trends <- base_google_trends_data %>%
 
 ```
 
-H~O~ = COVID-19 did not have an impact on the retail industry as measured by unemployment.
-H~A~ = COVID-19, in the form of state stay at home orders (SAH), negatively impacted the retail industry's health as measured by unemployment. 
+## How Did COVID Impact Unemployment?
+This analysis used employment data collected by IPMUS, with sample dates ranging from January 2019 to January 2021. The variables used were:
 
-Assumption 1: Increases in unemployment can be associated with a decline in the retail industry's health. As revenues decrease a retailer's ability to "carry" larger numbers of employees is reduced.
+| Variable   | Definition |  
+|:------:    |:-------------------------------------------------     | 
+| "whyunemp' | specifies why respondents were unemployed             |
+| "occ2010"  | occupation coding based on the Census Bureau's scheme |
+| "covidunaw"| unemployment attributed to COVID-19                   |
+| "lck_w_st" | start of stay-at-home orders for states that had them |
+
+Unemployment from the data was categorized into three "reason whys" specifically "Laid Off", "Other", and "Temporary Job Ended". INitial visualization of the data shows that there was an increase in unemployment around the time COVID-19 cases began accumulating in US (March - April 2020). Being laid off was identified as the primary reason unemployment during this same time frame. We also saw minimal change in monthly unemployment rates for temporary workers. For these reasons the analysis focuses on unemployment attributed to being laid off. The second plot shows a new variable that started being collected in April 2020, that identified those who could attribute their unemployment directly to COVID-19. Interestingly the slope of the decline in unemployment attributed to covid-19 mirrors the overall trend of unemployment decrease quickly following April.
 
 ```{r}
-# following code  builds a df with the variables of interest: state, layoffs, 
-# closure dates. Year and month variables are retained for potential group_by()
-# function.  
 
+sum_by_why <- wip_emp_data %>%
+  mutate(date = ymd(paste0(year, '-', month, '-01'))) %>% 
+  count(date, whyunemp) %>%
+  filter(date >= "2019-12-01")
+
+plot_by_why <- sum_by_why %>%
+  ggplot(aes(x = date, y = n, fill = factor(whyunemp)))+
+  scale_fill_discrete(name = "Reason",
+                      labels=c("Laid Off", "Other",
+                               "Temporary Work Concluded")) +
+  geom_bar(position = "dodge", stat = "identity") +
+  theme(legend.position="bottom") + 
+  xlab("Month") +
+  ylab("Number of People")
+plot_by_why
+
+sum_unemp <- wip_emp_data %>%
+  #na_if(99) %>%
+  mutate(date = ymd(paste0(year, '-', month, '-01'))) %>% 
+  count(date, covidunaw) %>%
+  filter(covidunaw %in% c(1, 2, NA)) %>%
+  filter(date >= "2019-12-01")
+#sum_unemp[is.na(sum_unemp)] <- 0
+
+plot_total <- ggplot(data = sum_unemp, aes(x = date, y = n, fill = factor(covidunaw))) +
+  geom_bar(position = "stack", stat = "identity") +
+  scale_fill_manual(name = "Covid Unemployment",
+                      labels = c("Not Recorded", "Covid related", "Not Related"),
+                      values = c('gray', "darkseagreen", "coral")) +
+  theme(legend.position="bottom")
+plot_total
+```
+
+The original hypothesis was that covid-19 measures imposed to reduce the spread of the disease was the reason for the impact in the retail industry. Specifically we looked at stay-at-home orders (SAH)
+
+H~O~ = COVID-19 did not have an impact on the retail industry as measured by unemployment.
+
+H~A~ = COVID-19, in the form of state stay at home orders (SAH), negatively impacted the retail industry's health as measured by unemployment. 
+ The following model 
+
+The following model assessed if there was a relationship between when SAH orders where implemented and unemployment.The original model included a LSDV factor for states to provide a fixed effect control; however, it was discovered that the dummy variable had not impact on the relationship.
+```{r}
 state_closure_layoff_df <- exploration_base_employment_df %>% 
   select('state', 'month', 'year', 'layoff') %>% 
   left_join(wip_state_closures, 'state')
 
-# model of SAH order start dates and layoffs. The state variable is a fixed effects LSDV.
-
-lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st + factor(state), 
+lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st, 
                                         data = state_closure_layoff_df)  
 
 export_summs(lm_state_closure_layoff_df, model.names = 'Relationship Between \nLayoffs and SAH')
 ```
+The model actually shows that there is negative relationship between layoffs and SAH order start days. This is understandable as the following graph shows that retail industry's health was starting to improve - as indicated by a decrease in unemployment - following the first SAH. The following plots layoffs, growth in total covid cases, and the date of the first SAH. 
 
-There model appears to show that there is no relationship between layoffs and SAH order start days. The following plots layoffs, growth in total covid cases, and the date of the first SAH. 
-
-```{r, echo = FALSE, message = FALSE}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # visualizations: the following code does some specific data wrangling
 # and produces some initial data visualizations. The wrangling includes 
 # standardizing of all the variables then merged into a single dataframe. 
@@ -173,13 +201,9 @@ ggplot(base_layoff_covid_cases) +
             angle=90, text=element_text(size=4))
 ```
 
-The plot shows that layoffs in the retail sector appear to have on a steep climb, showing a significant decline in the health of the retail sector, before the first SAH order and before covid-19 totals cases had become significant.  Another variable must have been influencing the rapid decline in the retail industry's health.
-
-Following up on a study that assessed social media's affect on creating a "Pandemic Panic", 
-we decided to see if Google Search trends for the term 'covid' had a relationship with layoffs.
+Since the model showed that SAH did not have a positive relationship with the decline in the retail industry's health - indicated by increased layoffs - we conducted a review of previous research and found s study that assessed social media's affect on creating a "Pandemic Panic". We decided to follow the paper's hypothesis but assesses if Google Search trends for the term 'covid' had a relationship with layoffs. The following plot shows google searches for covid, layoffs, covid cases and major events such as the first SAH and vaccine emergency authorization. The plot does show that covid search trends did parallel the layoff rates. 
 
 ```{r, echo = FALSE}
-# following code standardizes google trends then joins it with the layoff and covid total cases which have already been standardized.
 
 wip_layoff_google_trends <- wip_google_trends %>% 
   filter(!(Covid...United.States.) == '<1') %>% 
@@ -197,8 +221,6 @@ wip_layoff_google_trends <- wip_google_trends %>%
 wip_layoff_covid_cases_google_trends_df <- wip_emp_mod_1 %>% 
   left_join(wip_state_covid_history_mod_1, 'date') %>% 
   left_join(wip_layoff_google_trends, 'date')
-
-# following visualization plots layoffs, v. totals covid cases, v. google searches for covid. Also includes the first SAH order, and FDA emergency authorization to the first coivid vaccines.
 
 ggplot(wip_layoff_covid_cases_google_trends_df) + 
   geom_smooth( aes(x =date, y = monthly_std_layoff, colour = "Layoffs"), se = FALSE) + 
@@ -218,21 +240,15 @@ ggplot(wip_layoff_covid_cases_google_trends_df) +
             angle=90, text=element_text(size=4))
 
 ```
-The plot appears to show a potential relationship between ggogle search trends and layoffs.
+With the plot showing a potential relationship between ggogle search trends and layoffs. The following model was ran.
 ```{r}
-lm_gtrend_ccases_layoffs <-  lm( monthly_std_layoff ~ std_month_score +
+lm_gtrend_ccases_layoffs <-  lm_robust( monthly_std_layoff ~ std_month_score +
                              std_monthly_positive, data = wip_layoff_covid_cases_google_trends_df)
 
 export_summs(lm_gtrend_ccases_layoffs, 
              model.names = 'Layoff v. Covid Search Trends v. Total Cases')
-
-effect_plot(lm_gtrend_ccases_layoffs, std_month_score, plot.points = TRUE, 
-            x.label = 'Google Search Trends (Standardized)', 
-            y.label =  'Layoffs (Standardized)',
-            point.color = 'blue2', 
-            main.title = 'Layoff v. Covid Search Trends v. Total Cases')
 ```
-
+This model did show a positive statically signifcant relationship at the .05% confidence interval between increases in google searches for covid and the increase in layoff.  This indicates that covid did potentially impact the retail industry's health but not in the way expect, either through SAH or the growth in cases.  It appear that information about covid found through google searches may have changed the behavior of retail shoppers that lead to a decline in the health of the retail industry as indicated by layoffs.
 
 
 

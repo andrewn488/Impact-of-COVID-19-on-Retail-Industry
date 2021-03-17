@@ -14,8 +14,8 @@ state_closure_layoff_df <- wip_emp_data %>%
 
 # model of SAH order start dates and layoffs.  
 
-lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st + factor(state), 
-                                        data = state_closure_layoff_df)  
+lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st, 
+                                        data = state_closure_layoff_df) # 
 
 export_summs(lm_state_closure_layoff_df) # no relationship between layoffs and SAH 
 # order start dates.
@@ -28,9 +28,6 @@ state_covid_cases_layoff_df <-  base_state_covid_history_data %>%
   mutate(date = mdy(date)) %>% 
   mutate(date = ymd(date)) %>% 
   left_join(state_covid_cases_layoff_df, 'state') 
-
-
-
 
 # follow-up visualizations of layoff, covid-19 cases, and google search trends for covid ----
 
@@ -51,8 +48,8 @@ wip_layoff_google_trends <- wip_google_trends %>%
          std_month_score = (monthly_trend_mean - yearly_mean)/monthly_trend_sd,
          date = ymd(paste0(year, '-', month, '-01')))
          
-wip_emp_mod_1 <- exploration_base_employment_df %>% 
-  rename(date = 'survey_dates') %>% 
+wip_emp_mod_1 <- wip_emp_data %>% 
+  rename(date = survey_dates) %>% 
   filter(date >= as.Date('2019-12-01')) %>% 
   select('date', 'layoff', 'year', 'month') %>% 
   group_by(date) %>% 
@@ -61,7 +58,7 @@ wip_emp_mod_1 <- exploration_base_employment_df %>%
          monthly_sd = sd(monthly_av_layoff),
          monthly_std_layoff = (monthly_av_layoff - yearly_av_layoff)/monthly_sd)
 
-wip_state_covid_history_mod_1 <- base_state_covid_history_data %>% 
+wip_state_covid_history_mod_1 <- wip_state_covid_history_data %>% 
   select('date', 'state', 'positive') %>% 
   filter(date >= as.Date('2019-12-01')) %>% 
   mutate(year = year(date), month = month(date)) %>% 
@@ -97,7 +94,7 @@ ggplot(base_layoff_gtrends_covid_cases) +
 # following code analyzes potential relationship between google search trends, 
 # covid cases and layoffs ----
 
-lm_gtrend_ccases_layoffs <-  lm_robust( monthly_std_layoff ~ std_month_score +
+lm_gtrend_ccases_layoffs <-  lm( monthly_std_layoff ~ std_month_score +
                              std_monthly_positive, data = base_layoff_gtrends_covid_cases)
 
 export_summs(lm_gtrend_ccases_layoffs, 
@@ -110,45 +107,6 @@ effect_plot(lm_gtrend_ccases_layoffs, std_month_score, plot.points = TRUE,
             main.title = 'Layoff v. Covid Search Trends v. Total Cases')
 
 # following code will use a fixed effects model 
-
-wip_emp_data_mod_2 <- wip_emp_data %>% 
-  rename(date = 'survey_dates') %>% 
-  filter(date >= as.Date('2020-01-01')) %>% 
-  select('date', 'state', 'layoff', 'year', 'month') %>% 
-  group_by(state, year, month) %>% 
-  summarise(layoff = sum(layoff)) %>% 
-  mutate(date = ymd(paste0(year, '-', month, '-01')))
-  
-base_state_layoff_gtrends <- wip_emp_data_mod_2 %>% 
-  full_join(wip_layoff_google_trends, 'date')
-
-lm_state_layoff_gtrends <-  lm_robust(layoff ~ std_month_score + factor(state), 
-                                       data = base_state_layoff_gtrends)
-
-export_summs(lm_state_layoff_gtrends, 
-             model.names = 'TBD')
-
-
-
-wip_state_covid_history_mod_2 <- base_state_covid_history_data %>% 
-  select('date', 'state', 'positive') %>% 
-  mutate(date = mdy(date)) %>% 
-  mutate(date = ymd(date)) %>%
-  mutate(year = year(date), month = month(date)) %>% 
-  filter(!(state == 'AS'), date >= as.Date('2020-01-01')) %>% 
-  group_by(state, year, month) %>% 
-  summarise(total_cases = sum(positive)) %>% 
-  mutate(date = ymd(paste0(year, '-', month, '-01')))
-
-base_state_layoff_gtrends_case <- wip_emp_data_mod_2 %>% 
-  left_join(wip_layoff_google_trends, 'date') %>% 
-  left_join(wip_state_covid_history_mod_2, 'date')
-
-lm_base_state_layoff_gtrends_case <-  lm_robust(layoff ~ std_month_score + total_cases +
-                                                factor(state.x), 
-                                                data = base_state_layoff_gtrends_case)
-export_summs(lm_base_state_layoff_gtrends_case, 
-             model.names = 'TBD')
  
 # DiD wrangling and analysis ----
 # dummy variable build - creating a dummy variable for states that implemented 

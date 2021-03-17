@@ -47,7 +47,7 @@ wip_emp_data <- base_emp_data %>% filter(!(whyunemp == 0)) %>%
 # total number of 'whyunemp', 'covidunaw' reported for the month.  It then 
 # removes the base columns. 
 
-base_employment_data <- wip_emp_data %>% 
+wip_emp_data <- wip_emp_data %>% 
   group_by(year, month, statefip) %>% 
   mutate(layoff = sum(whyunemp == 1), 
          other_type_loss = sum(whyunemp == 2), 
