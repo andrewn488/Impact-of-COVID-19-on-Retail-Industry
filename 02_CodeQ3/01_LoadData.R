@@ -63,7 +63,7 @@ df <- df %>%
 survey <- as_survey(df, weights = c(wtfinl)) 
 
 # Check correlation between independent variables
-cor(df[c("employed", "female", "married", "covid", "time")])
+cor(df[c( "covid", "time")])
 
 ######################################## Gender Analysis ############################################
 #####################################################################################################
@@ -204,7 +204,8 @@ emp_age
 ###############################################################################################################
 ### Linear Probability Model:  Education Category Regression Results 
 educCreg <- lm_robust(employed ~ educationCategories*covid + covid*time, survey)
-export_summs(educCreg, digits = 9, robust = TRUE)
+educ_reg_table <- export_summs(educCreg, digits = 9, robust = TRUE)
+educ_reg_table
 
 # calculate employment rate by education level category
 educ_emp_monthly <- survey %>% 
