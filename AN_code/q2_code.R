@@ -1,7 +1,7 @@
 # Author: Andrew Nalundasan
 # For: OMSBA 5300, Seattle University
 # Team: Group 3: Arunima Roy, Jennifer Grosz, Mikayla Davis, Glen Lewis, Andrew Nalundasan
-# Date: 3/6/2021
+# Date: 3/17/2021
 # Data Translation Challenge
 # Q2: How has retail fared relative to other industries?
 # Data Extraction
@@ -12,7 +12,7 @@ library(jtools)
 library(vtable)
 library(haven)
 library(lubridate)
-library(tidylog)
+# library(tidylog)
 library(estimatr)
 library(srvyr) # install.packages("srvyr")
 library(zoo) # dates library with yearmo
@@ -28,68 +28,51 @@ retail <- read_csv('../AN_raw_data/cps_00002.csv.gz')
 inddf <- read_csv("../AN_raw_data/indnames.csv")
 
 ####### Working with Data ##########
-
-# join retail with inddf:
+# rename merge-key column
 retail <- retail %>% rename(ind = IND)
+# join retail with inddf:
 retail_with_ind <- left_join(retail, inddf, by = "ind") %>%
+  # filter out NAs
   filter(indname != "NA")
 
 
-# mutate variables for industries of interest
-# mutate 'employed' variable
-retail_vs_ind <- retail_with_ind %>% 
-  mutate(Retail = ind %between% c(4670,5790),
-         Arts_Ent_Rec_Accom_Food = ind %between% c(8560, 8690),
-         Construction = ind == 770,
-         FINC_Ins_Real_Estate = ind %between% c(6870, 7190),
-         Public_Admin = ind %between% c(9370, 9590),
-         employed = case_when(
-           EMPSTAT %in% c(01, 10, 12) ~ 1,
-           EMPSTAT %in% c(20, 21, 22) ~ 0)) 
-
-# unite YEAR + MONTH to create 'yrmo' and mutate
-# mutate 'covid' variable for pre-covid and post-covid
-retail_vs_ind <- retail_vs_ind %>% 
-  unite("yrmo", c("YEAR", "MONTH"), sep = '', remove=FALSE) %>% 
-  mutate(yrmo = as.numeric(yrmo),
+retail_vs_ind_v4 <- retail_with_ind %>% 
+  # create year_month variable
+  unite(year_month, c("YEAR", "MONTH"), sep = "-", remove = FALSE)  %>%
+  # convert to a yearmon data type
+  mutate(year_month = as.yearmon(year_month),
+         # create covid variable
          covid = case_when(
-           yrmo < 20204 ~ 0,
-           yrmo > 20202 ~ 1),
-         time = cumsum(c(1, as.numeric(diff(yrmo)) != 0))
-  ) %>% 
-  filter(YEAR >= 2019)
-
-# mutate industry and define different industries of interest
-retail_vs_ind_v2 <- retail_vs_ind %>% 
-  mutate(
-    industry = case_when(
-      Retail == 1 ~ "Retail",
-      Arts_Ent_Rec_Accom_Food == 1 ~ "Arts_Ent_Rec_Accom_Food",
-      Construction == 1 ~ "Construction",
-      FINC_Ins_Real_Estate == 1 ~ "FINC_Ins_Real_Estate",
-      Public_Admin == 1 ~ "Public_Admin")
-  )
-
-# filter out NA's from data set and make industry a factor variable
-retail_vs_ind_v2 <- retail_vs_ind_v2 %>% 
+           year_month < as.yearmon("2020-4") ~ 0,
+           year_month > as.yearmon("2020-2") ~ 1)) %>%
+  # drop march 2020 from data set and filter out data from before 2019
+  filter(year_month != as.yearmon("2020-3"), YEAR > 2018) %>%
+  # create time variable
+  mutate(time = cumsum(c(1,as.numeric(diff(year_month))!=0)),
+         # create dummy employed variable where 1 = employed and 0 = unemployed
+         employed = case_when(
+           EMPSTAT %in% c(10, 12) ~ 1, 
+           EMPSTAT %in% c(20, 21, 22) ~ 0),
+         # create categorical industry variable
+         industry = case_when(
+           ind %between% c(4670,5790) ~ "Retail",
+           ind %between% c(8560, 8690) ~ "Arts_Ent_Rec_Accom_Food",
+           ind == 770 ~ "Construction",
+           ind %between% c(6870, 7190)  ~ "FINC_Ins_Real_Estate",
+           ind %between% c(9370, 9590) ~ "Public_Admin"),
+         # factor industry variable
+         industry = factor(industry)) %>%
+  # filter out rows from data set with NAs in industry column
   filter(industry != "NA") %>% 
-  mutate(industry = factor(industry))
+  # reorder the levels of industry factor for Retail to be on top
+  mutate(industry = factor(industry, levels = rev(levels(industry)))) %>%
+  filter(WTFINL != "NA", employed != "NA")
 
-# reorder the levels of industry factor for Retail to be on top
-retail_vs_ind_v3 <- retail_vs_ind_v2 %>% 
-  filter(industry != "NA") %>% 
-  mutate(industry = factor(industry, levels = rev(levels(industry))))
-
-######## add weight to survey data ##############
-retail_vs_ind_v4 <- retail_vs_ind_v3 %>% 
-  filter(WTFINL != "NA") %>% 
-  filter(employed != "NA")
-
+######## add population weight to survey data ##############
 survey <- 
   as_survey(retail_vs_ind_v4, weights = c(WTFINL)) 
 
-
-# make rate for all industries
+# calculate employment rate for all industries
 industry_rate <- survey %>%
   group_by(YEAR, MONTH, industry) %>%
   summarize(employment_rate = survey_mean(employed, vartype = "ci")) %>%
@@ -98,21 +81,9 @@ industry_rate <- survey %>%
 # merge data sets:
 merged_df <- left_join(retail_vs_ind_v4, industry_rate, by = c("YEAR", "MONTH"))
 
-# create year_month variable and set type to date
+# convert year_month to data data type for plot
 merged_df <- merged_df %>% 
-  unite(year_month, c("YEAR", "MONTH"), sep = "-", remove = FALSE)  %>%
-  mutate(year_month = (Date = as.yearmon(year_month))) %>%
   mutate(year_month = as.Date(year_month))
-
-
-# Employment Rate 
-employment_rate <- survey %>% 
-  group_by(YEAR, MONTH) %>% 
-  summarize(employment_rate = survey_mean(employed))
-
-# merge employment rate into df
-merged_df <- left_join(merged_df, employment_rate, by = c("YEAR", "MONTH")) 
-
 
 # we finally have the data tidied and in the correct format that we need. time to do analysis:
 # industry reg:
