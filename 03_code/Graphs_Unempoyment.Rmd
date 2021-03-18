@@ -1,0 +1,60 @@
+---
+title: "Graphs of Unemployment"
+author: "Mikayla Davis"
+date: "3/14/2021"
+output: html_document
+---
+---
+title: "Unemployment Graphs"
+author: "Mikayla Davis"
+date: "3/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Reason for Job Loss
+Unemployment from our data was categorized into "Reason Why" and we wanted to specifically look at whether their was an increase of unemployment in one category over others. The categories we specicifically looked at were "Laid Off", "Other" and "Temporary Job Ended". From this graph, we concluded that there was an increase in unemployment right around when COVID-19 cases came to the US - in March, with a peak in April. We also indentified that the majority of unemployment came from workers who were laid off. We also see minimal impact of unemployment for temporary workers. At the end of 2020, we see that those who are unemployed for "Other" reasons had an increase and becomes the majority reason over being laid off. I would like to see further information on why this changed and if those were initially considered laid off became recategorized as "Other" for their unemployment status.
+
+```{r reason why, echo = False}
+sum_by_why <- wip_emp_data %>%
+  count(survey_dates, whyunemp) %>%
+  filter(survey_dates >= "2019-11-01")
+
+plot_by_why <- sum_by_why %>%
+  ggplot(aes(x = survey_dates, y = n, fill = factor(whyunemp)))+
+  scale_fill_discrete(name = "Reason",
+                      labels=c("Laid Off", "Other",
+                               "Temporary Work Concluded")) +
+  geom_bar(position = "dodge", stat = "identity") +
+  theme(legend.position="bottom") + 
+  xlab("Month") +
+  ylab("Number of People")
+plot_by_why
+```
+
+## How Did COVID Impact Unemployment?
+We wanted to see if the reason for the unemployment was because of COVID reasons and found a dataset that determined if a person was unable to work because of COVID-19. This data was collected from May 2020 to January 2021, so only applies to some of the unemployment data and does not include the peak in April of 2020. From this graph, we can see that COVID was the majority reason for why there was unemployment. The Not Reason For category does not appear to have been effected much when looking at data in the last two months of 2019. 
+
+
+```{r COVID and Unemployment, echo=FALSE}
+
+sum_unemp <- wip_emp_data %>%
+  #na_if(99) %>%
+  count(survey_dates, covidunaw) %>%
+  filter(covidunaw %in% c(1, 2, NA)) %>%
+  filter(survey_dates >= "2019-11-01")
+sum_unemp[is.na(sum_unemp)] <- 0
+
+plot_total <- ggplot(data = sum_unemp, aes(x = survey_dates, y = n, fill = factor(covidunaw))) +
+  geom_bar(position = "stack", stat = "identity") +
+  scale_fill_manual(name = "Covid Unemployment",
+                      labels = c("Not Recorded", "Not Reason For", "Reason For"),
+                      values = c('gray', "darkseagreen", "coral")) +
+  theme(legend.position="bottom")
+plot_total
+```
+
