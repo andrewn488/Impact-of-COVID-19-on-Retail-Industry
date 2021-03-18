@@ -38,9 +38,3 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# ignore following file types: 
-*.dta
-*.pdf
-*.csv
-*.gz
-*.zip
