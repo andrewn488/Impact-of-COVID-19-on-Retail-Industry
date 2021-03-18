@@ -1,15 +1,13 @@
 ---
-title: "Q3 Analysis"
-author: "Jennifer Grosz and Arunima Roy"
-date: "3/14/2021"
+title: "5300 DTC Q3 Analysis"
+author: "Jennifer Grosz, Arunima Roy"
+date: "3/19/2021"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-## R Markdown
 
 
 ```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
@@ -55,7 +53,7 @@ Educational attainment categories are identified through a variable named “edu
 
 Racial categories are identified through a variable named “racialCategories” and it indicates the race of each person in the sample as White, Black, American Indian/Aleut/Eskimo, Asian, Hawaiian/Pacific Islander or Mixed. We determined the assignment value for this variable based on each respondents original coded response for the variable “race” recorded in the extracted IPUMS CPS data.
 
-Finally, we generated a date variable “year_month” by uniting “year” and “month” for which the respondents data was recorded in the extracted IPUMS CPS data. With this variable we removed all data from March 2020 from our data set in order to eliminate uncertainty around when the COVID-19 pandemic began in the US. By removing March 2020 from our data set we have established a clear time line for determining data collected before COVID-19 and during COVID-19 as the pandemic is still ongoing in the US today, this difference is represented through a binary variable named "covid" in our data set. We also created an incrementally increasing variable to represent the passing of time measured in 1-month units
+Finally, we generated a date variable “year_month” by uniting “year” and “month” for which the respondents data was recorded in the extracted IPUMS CPS data. With this variable we removed all data from March 2020 from our data set in order to eliminate uncertainty around when the COVID-19 pandemic began in the US. By removing March 2020 from our data set we have established a clear timeline for determining data collected before COVID-19 and during COVID-19 as the pandemic is still ongoing in the US today, this difference is represented through a binary variable named "covid" in our data set. We also created an incrementally increasing variable to represent the passing of time measured in 1-month units
 
 Our resulting data set contains the following variables:
 year: survey year in which the data was collected 
@@ -88,9 +86,10 @@ The regression model we deemed most appropriate for this analysis was the linear
 #### Gender Analysis
 The first regression analysis was conducted to determine the associated effect of being a female during the COVID-19 pandemic has on a person's probability of being employed relative to being male during the COVID-19 pandemic.   
 
-```{r, echo=FALSE}
-female_reg_table
-#round(0.2347884, 2)
+```{r}
+### Linear Probability Model: Marriage Status Regression Results 
+femalereg <- lm_robust(employed ~ female*covid + covid*time, survey)
+export_summs(femalereg, digits = 9, robust = TRUE)
 ```
 
 For this regression analysis, what we really want to focus on is the coefficient for the interaction between the female and COVID-19 variables in our model as that measures the effect of being female during the COVID-19 pandemic on the probability of being employed relative to being male.
@@ -100,8 +99,21 @@ Prior to the COVID-19 pandemic, we see the effect of being female is associated 
 However, once the COVID-19 pandemic started, we see the effect of being female during the COVID-19 pandemic is associated with approximately 0.78 percentage points lower in the probability of being employed relative to males during the COVID-19 pandemic.
 
 
-```{r, echo=FALSE}
-emp_women
+```{r}
+#Plot
+ggplot(female_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = male_employment_rate, color = "men")) + 
+  geom_ribbon(aes(ymax = maleHigh, ymin = maleLow), alpha=0.2) +
+  geom_line(aes(
+    y = female_employment_rate, color = "women")) + 
+  geom_ribbon(aes(ymax = femaleHigh, ymin = femaleLow), alpha=0.2) +
+  labs(title = "Employment Rates For Men and Women", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
 ```
 
 Figure 1. 
@@ -116,8 +128,11 @@ One significant take away from this visual is that females have an employment ra
 #### Marriage Status Analysis  
 The second regression analysis was conducted to determine the associated effect being married during the COVID-19 pandemic has on a person's probability of being employed relative to not being married during the COVID-19 pandemic. 
 
-```{r, echo=FALSE}
-married_reg_table
+```{r}
+### Linear Probability Model: Marriage Status Regression Results 
+marriedreg <- lm_robust(employed ~ married*covid + covid*time, survey)
+export_summs(marriedreg, digits = 9, robust = TRUE)
+
 ```
 
 For this regression analysis, what we really want to focus on is the coefficient for the interaction between married and COVID-19 variables in our model as that measures the effect of being married during the COVID-19 pandemic on the probability of being employed relative to not being married.
@@ -126,8 +141,22 @@ Prior to the COVID-19 pandemic, we see the effect of being married is associated
 
 However, once the COVID-19 pandemic started, we see the effect of being married during the COVID-19 pandemic is associated with approximately 2.01 percentage points higher in the probability of being employed relative to not being married during the COVID-19 pandemic.
 
-```{r, echo=FALSE}
-emp_married
+```{r}
+# Plot
+ggplot(married_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = not_employment_rate, color = "Not Married")) + 
+  geom_ribbon(aes(ymax = not_eHigh, ymin = not_eLow), alpha=0.2) +
+  geom_line(aes(
+    y = married_employment_rate, color = "Married")) + 
+  geom_ribbon(aes(ymax = married_eHigh, ymin = married_eLow), alpha=0.2) +
+  labs(title = "Employment Rates For Married And Not Married People", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
 ```
 
 Figure 2. 
@@ -136,7 +165,7 @@ Above in Figure 2 shows that during approximately March of 2020 there is an imme
 
 The employment rate for non-married people can be seen declining to a rate of employment that is much lower than married people at it's worst and the recovery of the employment rate for non-married people still has much has farther to go in order to get back to the pre-COVID non-married person employment rates compared to the employment rate recovery seen for married people, both of which properly reflect the findings from our linear probability regression analysis. 
 
-We can see that from October 2020, the married employment rate is holding steady above the 95% employment rate where as the not married employment rate has only recovered to an employment rate 90% and seems to be on a more significant downward trend again. It would be interesting to look at non-married people's employment rates over the next few months and a potentially conduct another analysis for this specific concerning trend.  
+We can see that from October 2020, the married employment rate is holding steady above the 95% employment rate whereas the not married employment rate has only recovered to an employment rate 90% and seems to be on a more significant downward trend again. It would be interesting to look at non-married people's employment rates over the next few months and a potentially conduct another analysis for this specific concerning trend.  
 
 As of January 2021, this visual shows that the employment rate for married people is higher than the employment rate for non-married people.
 
@@ -144,8 +173,10 @@ As of January 2021, this visual shows that the employment rate for married peopl
 #### Age Generation Analysis
 The third regression analysis was conducted to determine the associated effect of being in one age generation during the COVID-19 pandemic has on a person's probability of being employed relative to being in another age generation during the COVID-19 pandemic. 
 
-```{r, echo=FALSE}
-age_reg_table
+```{r}
+### Linear Probability Model:  Age Generation Regression Results 
+agereg <- lm_robust(employed ~ ageGeneration*covid + covid*time, survey)
+export_summs(agereg, digits = 9, robust = TRUE)
 ```
 
 For this regression analysis, what we really want to focus on is the coefficient for the interaction between each age generation and COVID-19 variable in our model as that measures the effect of being in one age generation during the COVID-19 pandemic on the probability of being employed relative to being in the Baby Boomer age generation during the pandemic.
@@ -163,8 +194,35 @@ Once the COVID-19 pandemic started, we see the effect of being a person from Gen
 Once the COVID-19 pandemic started, we see the effect of being a person from the Millennial generation during the COVID-19 pandemic is associated with approximately 0.41 percentage points lower in the probability of being employed relative to being in a person from the Baby Boomer generation. 
 
 
-```{r, echo=FALSE}
-emp_age
+```{r}
+# Plot
+ggplot(age_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = employment_rate_BabyBoomers, color = "Baby Boomers")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_BabyBoomers, 
+                  ymin = employment_rate_low_BabyBoomers), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_GenerationX, color = "Generation X")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_GenerationX, 
+                  ymin = employment_rate_low_GenerationX), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_GenerationZ, color = "Generation Z")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_GenerationZ, 
+                  ymin = employment_rate_low_GenerationZ), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_low_Millennials, color = "Millennials")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Millennials, 
+                  ymin = employment_rate_low_Millennials), alpha=0.2) +
+  
+  labs(title = "Employment Rates for Age Generations", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
 ```
 
 Figure 3. 
@@ -183,8 +241,10 @@ As of January 2021, this visual shows that the employment rates for Baby Boomers
 #### Highest Educational Attainment Analysis
 The fourth regression analysis was conducted to determine the associated effect of having one educational attainment level during the COVID-19 pandemic has on a person's probability of being employed relative to having another educational attainment level during the COVID-19 pandemic. 
 
-```{r, echo=FALSE}
-educ_reg_table
+```{r}
+### Linear Probability Model:  Education Category Regression Results 
+educCreg <- lm_robust(employed ~ educationCategories*covid + covid*time, survey)
+export_summs(educCreg, digits = 9, robust = TRUE)
 ```
 
 For this regression analysis, what we really want to focus on is the coefficient for the interaction between each educational attainment category and COVID-19 variable in our model as that measures the effect of having one educational attainment level during the COVID-19 pandemic on the probability of being employed relative to having an Associate degree during the COVID-19 pandemic.
@@ -214,8 +274,51 @@ Once the COVID-19 pandemic started, we see the effect of having a Professional d
 Once the COVID-19 pandemic started, we see the effect of having a Doctorate degree is associated with approximately 2.65 percentage points higher in the probability of being employed relative to having an Associate degree during the COVID-19 pandemic.
 
 
-```{r, echo = FALSE}
-emp_educ_cat
+```{r}
+#Plot
+ggplot(educ_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = employment_rate_AssociateDegree, color = "Associate Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_AssociateDegree, 
+                  ymin = employment_rate_low_AssociateDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_BachelorDegree, color = "Bachelor's Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_BachelorDegree, 
+                  ymin = employment_rate_low_BachelorDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_Below_HS_Graduate, color = "Below High School Graduate")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Below_HS_Graduate, 
+                  ymin = employment_rate_low_Below_HS_Graduate), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_DoctorateDegree, color = "Doctorate Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_DoctorateDegree, 
+                  ymin = employment_rate_low_DoctorateDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_HighSchoolGraduate, color = "High School Graduate")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_HighSchoolGraduate, 
+                  ymin = employment_rate_low_HighSchoolGraduate), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_MasterDegree, color = "Master's Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_MasterDegree, 
+                  ymin = employment_rate_low_MasterDegree), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_ProfessionalDegree, color = "Professional Degree")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_ProfessionalDegree, 
+                  ymin = employment_rate_low_ProfessionalDegree), alpha=0.2) +
+  
+  labs(title = "Employment Rates for Education Levels", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
 ```
 
 Figure 4. 
@@ -228,8 +331,10 @@ Since the beginnings of quarantine, employment rates have gone up but given the 
 #### Racial Category Analysis
 The fifth and final regression analysis was conducted to determine the effect being one race during the COVID-19 pandemic has on a person's probability of being employed relative to having another race during the COVID-19 pandemic. 
 
-```{r, echo=FALSE}
-race_reg_table
+```{r}
+### Linear Probability Model:  Racial Category Regression Results 
+racereg <- lm_robust(employed ~ racialCategories*covid + covid*time, survey)
+export_summs(racereg, digits = 9, robust = TRUE)
 ```
 
 For this regression analysis, what we really want to focus on is the coefficient for the interaction between each race and COVID-19 variable in our model as that measures the effect of one race during the COVID-19 pandemic on the probability of being employed relative to being American Indian/ Aleut/ or Eskimo.
@@ -254,8 +359,46 @@ Once the COVID-19 pandemic started, we see the effect of being Mixed races is as
 
 Once the COVID-19 pandemic started, we see the effect of being White is associated with approximately 0.81 percentage points higher in the probability of being employed relative to being American Indian/ Aleut/ or Eskimo during the COVID-19 pandemic.
 
-```{r, echo= FALSE}
-emp_race
+```{r}
+# Plot
+ggplot(race_df_z, aes(year_month)) + 
+  geom_line(aes(
+    y = employment_rate_White, color = "White")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_White, 
+                  ymin = employment_rate_low_White), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_Black, color = "Black")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Black, 
+                  ymin = employment_rate_low_Black), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_American_Indian_Aleut_Eskimo, color = "American Indian/Aleut/Eskimo")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_American_Indian_Aleut_Eskimo, 
+                  ymin = employment_rate_low_American_Indian_Aleut_Eskimo), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_Asian, color = "Asian")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Asian, 
+                  ymin = employment_rate_low_Asian), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_Hawaiian_Pacific_Islander, color = "Hawaiian/Pacific Islander")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Hawaiian_Pacific_Islander, 
+                  ymin = employment_rate_low_Hawaiian_Pacific_Islander), alpha=0.2) +
+  
+  geom_line(aes(
+    y = employment_rate_Mixed, color = "Mixed")) + 
+  geom_ribbon(aes(ymax = employment_rate_upp_Mixed, 
+                  ymin = employment_rate_low_Mixed), alpha=0.2) +
+  
+  labs(title = "Employment Rates for Racial Groups", 
+       x = "Date", 
+       y = "Employment Rate")  +
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%Y %b") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
 ```
 
 Figure 5. 
@@ -267,10 +410,10 @@ Above in Figure 5, when quarantine started due to COVID-19 in the US, which was 
 The linear probability regression model used for each regression model of our analysis assumes that the probability of our outcome is a linear function of the regressors, when in reality we must acknowledge that the true relationship between a binary outcome, in our case: being employed or not being employed, and the binary or categorical explanatory variable used in our models as the variable of interest are going to have an inherently nonlinear relationship. In an effort to best accommodate this assumption violation, we have provided supplemental visuals where employment rate is being used as a substitute for the employed outcome variable in our linear probability regression models.
 
 Gender Analysis:
-One assumptions for this analysis is that people can only be a gender of male or female. There was no data collected for people who identify as non-binary or any other sexual orientation in the IPUMS CPA data, so there would have been means for us to account for those respondents who identify as anything other than male or female in this analysis.
+One assumption for this analysis is that people can only be a gender of male or female. There was no data collected for people who identify as non-binary or any other sexual orientation in the IPUMS CPA data, so there would have been means for us to account for those respondents who identify as anything other than male or female in this analysis.
 
 Marriage Status Analysis:
-We grouped people who are married, but do not live with their spouse under the classification of not being married. This might have been an erroneous assignment on our part, but it was our assumption that people who are living in other homes separately, but married might have a spouse in another country and are otherwise living as a single person. From this analysis we wanted to determine if people who are married, in the traditional sense, were more impacted by COVID-19 than single people in regard to their employment status and so we categorized people who are married, but living separately accordingly.
+We grouped people who are married, but do not live with their spouse under the classification of not being married. This might have been an erroneous assignment on our part, but it was our assumption that people who are living in other homes separately but married might have a spouse in another country and are otherwise living as a single person. From this analysis we wanted to determine if people who are married, in the traditional sense, were more impacted by COVID-19 than single people in regard to their employment status and so we categorized people who are married but living separately accordingly.
 
 Age Generation Analysis:
 Another assumption we made was that people who are employed are actually people who are working in the traditional sense, but there could be plenty of older people included in our data set whose employment status was not affected by the COVID-19 pandemic because they are working by title alone. By this there could be people who are owners or presidents of companies who do not have an active day-to-day role in the operations of the business and would not be laid off even if layoffs were occuring at their company because they hold such a valuable, high up position in the company.
@@ -291,7 +434,7 @@ Briefly stated, on average as of 2021 the following are our conclusions:
 
 3) Baby Boomers and Generation X working more than Millennials, but Millennials are working more Generation Z. 
 
-4) People with Doctorate or Professional degree's are working more than people with Master's degrees. 
+4) People with Doctorate or Professional degrees are working more than people with Master's degrees. 
 People with Master’s degrees are working more than people with Bachelor's degrees. 
 People with Bachelor’s degrees are working more than people with Associates degree. 
 People who have Associates degrees are working more than High School graduates. 
