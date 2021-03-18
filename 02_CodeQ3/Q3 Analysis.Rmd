@@ -1,6 +1,11 @@
 ---
+<<<<<<< HEAD
 title: "5300 DTC Q3 Analysis"
 author: "Jennifer Grosz, Arunima Roy"
+=======
+title: "Q3 Analysis"
+author: "Jennifer Grosz and Arunima Roy"
+>>>>>>> f8e7b54f382ba346ac4159ae2dca5ac60134ca88
 date: "3/19/2021"
 output: html_document
 ---
