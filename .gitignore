@@ -38,5 +38,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# ignore .dta files
-*.dta
+
