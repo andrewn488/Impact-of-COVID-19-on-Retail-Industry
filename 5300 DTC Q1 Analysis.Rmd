@@ -1,7 +1,7 @@
 ---
 title: "5300 DTC Q1 Analysis"
 author: "Mikayla Davis, Glen Lewis"
-date: "3/14/2021"
+date: "3/19/2021"
 output: html_document
 ---
 
@@ -91,7 +91,7 @@ We initially assumed that stay at home orders (SAH) would have led to an unemplo
 
 ## Analysis Variables
 
-In our analysis, we looked at how COVID impacted the retail industry's health in terms of unemployment. The objective was to determine if COVID-19 impacted the health of the retail industry as represented by changes in unemployment rates last year.  The assumption is that a healthy retail industry has a consistent flow of revenues enabling it to maintain a uniformed sized employee pool. Increases in retail unemployment would characterize an unhealthy industry as retail revenues drop forcing retailers to minimize losses by reducing employee attributed operational costs. Another assumption is that COVID attributable effects were the primary driver in significant changes in unemployment rates. 
+In our analysis, we looked at how COVID impacted the retail industry's health in terms of unemployment. The objective was to determine if COVID-19 impacted the health of the retail industry as represented by changes in unemployment rates last year.  The assumption is that a healthy retail industry has a consistent flow of shoppers contributing to a steady flow of revenues enabling it to maintain a uniformed sized employee pool. Increases in retail unemployment would characterize an unhealthy industry as retail revenues drop forcing retailers to minimize losses by reducing employee attributed operational costs. Another assumption is that COVID attributable effects were the primary driver in significant changes in unemployment rates. 
 
 Our analysis used employment data collected by IPMUS surveys conducted January 2019 to January 2021. The survey variables we used were:
 
@@ -113,7 +113,7 @@ COVID-19 data was taken from The COVID Tracking Project.
 |:------    |:-------------------------------------------------     | 
 | "positive"  total_cases | the total positive COVID cases up to that date |
 
-COVID-19 protective measures variable information was draw from numerious state and local government websites.
+COVID-19 protective measures variable information was draw from numerous state and local government websites.
 
 | Variable & Common Name | Definition |  
 |:------    |:-------------------------------------------------     | 
@@ -137,7 +137,8 @@ plot_by_why <- sum_by_why %>%
   geom_bar(position = "dodge", stat = "identity") +
   theme(legend.position="bottom") + 
   xlab("Month") +
-  ylab("Number of People")
+  ylab("Number of People")+
+  ggtitle('Types of Unemployment by Month')
 plot_by_why
 
 sum_unemp <- wip_emp_data %>%
@@ -145,19 +146,20 @@ sum_unemp <- wip_emp_data %>%
   mutate(date = ymd(paste0(year, '-', month, '-01'))) %>% 
   count(date, covidunaw) %>%
   filter(covidunaw %in% c(1, 2, NA)) %>%
-  filter(date >= "2019-11-01")
-#sum_unemp[is.na(sum_unemp)] <- 0
+  filter(date >= "2019-11-01") %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 plot_total <- ggplot(data = sum_unemp, aes(x = date, y = n, fill = factor(covidunaw))) +
   geom_bar(position = "stack", stat = "identity") +
   scale_fill_manual(name = "Covid Unemployment",
                       labels = c("Not Recorded", "Covid related", "Not Related"),
                       values = c('gray', "darkseagreen", "coral")) +
-  theme(legend.position="bottom")
+  theme(legend.position="bottom") +
+  ggtitle('Covid-19 Atributed Unemployment by Month')
 plot_total
 ```
 
-Seeing the spike in unemployment at the beginning of 2020 in the plot above, we established an initial hypothesis that COVID-19 measures imposed to reduce the spread of the disease were negatively impacting the retail industry's health. Specifically, we looked at stay-at-home orders (SAH):
+Seeing the spike in unemployment at the beginning of 2020 in the *Types of Unemployment by Month* plot above, we established an initial hypothesis that COVID-19 measures imposed to reduce the spread of the disease were negatively impacting the retail industry's health. Specifically, we looked at stay-at-home orders (SAH):
 
 H~O~ = COVID-19 did not have an impact on the retail industry as measured by unemployment.
 
@@ -177,9 +179,9 @@ lm_state_closure_layoff_df <- lm_robust(layoff ~ lck_dwn_st + factor(state),
 export_summs(lm_state_closure_layoff_df, coefs = 'lck_dwn_st',  model.names = 'Relationship Between \nLayoffs and SAH')
 ```
 
-The model did not show a statistically significant relationship between the SAH start dates and unemployment rates. This is not surprising as the plot shows layoffs began to decline soon after the first SAH orders. The IPMUS variable “covid_impact” also reflects that trend (see above).  Starting in April 2020, IPMUS began asking respondents to report if their unemployment was attributable to COVID. That variable also saw a decline mirroring that of unemployment due to layoffs following the first SAH. 
+The model did not show a statistically significant relationship between the SAH start dates and unemployment rates. This is not surprising as the plot shows layoffs began to decline soon after the first SAH orders issued on March 18th, 2020. The IPMUS variable “covid_impact” also reflects that trend (see above).  Starting in April 2020, IPMUS began asking respondents to report if their unemployment was attributable to COVID. That variable also saw a decline mirroring that of unemployment due to layoffs following the first SAH. 
 
-Thus, SAH appears not to have had a negative impact on the retail sector. To understand what may have led to the sudden increase in unemployment - and decay in the retail sector's health - that occurred at the beginning of the year we decided to look for another factor: the rise in COVID-19 cases.
+Thus, SAH appear not to have had a negative impact on the retail sector. To understand what may have led to the sudden increase in unemployment in the the first quarter of 2020 we decided to look for another factor: the rise in COVID-19 cases. For this analysis to occur we are assuming that the reported COVID-19 cases in the March, April time frame are accurate.  We are making this assumption because the total number of COVID cases could have been higher due to a number of issues ranging from the initial confusion in reporting metrics to the lack of available testing.
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 
 wip_emp_mod_1 <- exploration_base_employment_df %>% 
@@ -225,9 +227,9 @@ ggplot(base_layoff_covid_cases) +
             angle=90, text=element_text(size=4))
 ```
 
-The new model showed a negative relationship between layoffs and cases.  We could interpret this as the retail industry's health improving as COVID-19 cases rose.  Whether there is relationship present or not the plot does show a decline in unemployment while cases were still rising.    
+The new model showed a negative relationship between layoffs and cases.  We could interpret this as the retail industry's health improving as COVID-19 cases rose. Whether there is relationship present or not the *Layoff Trends v. Total COVID Cases v. Start of SAH Orders* plot does show a decline in unemployment while cases were still rising.    
 
-We then conducted a review of previous research and found a study assessing social media's effect on creating a "Pandemic Panic" [^1]. We decided to follow the paper's hypothesis but assessing if Google Search trends for the term 'covid' had a relationship with layoffs. The following plot shows google searches for covid, layoffs, covid cases and major events such as the first SAH and vaccine emergency authorization. The plot does show that covid search trends did parallel the layoff rates.
+We then conducted a review of previous research and found a study assessing social media's effect on creating a "Pandemic Panic" [^1]. We decided to follow the paper's hypothesis but assessing if Google Search trends for the term 'covid' had a relationship with layoffs. The following *Google COVID Search Trends v. Retail Layoffs v. Total COVID Cases* plot shows google searches for covid, layoffs, covid cases and major events such as the first SAH and vaccine emergency authorization. The plot does show that covid search trends did parallel the layoff rates.
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 
 wip_layoff_google_trends <- wip_google_trends %>% 
@@ -272,6 +274,7 @@ ggplot(wip_layoff_covid_cases_google_trends_df) +
             angle=90, text=element_text(size=4))
 
 ```
+
 Since Google searches for the term “COVID” seemed to have a positive correlation (0.12) with unemployment, we decided to run a linear model of the effect of Google searches and total positive reported COVID cases with unemployment, which was our final model.
 
 ```{r}
@@ -288,7 +291,7 @@ This model did show a positive, statically significant relationship at the .05% 
 
 COVID-19 did initially impact the retail industry's health negatively as we saw a rise in unemployment in 2020.
 
-We see that the retail industry had a large spike in unemployment right around the time that the US reported the first positive cases of COVID. We also see that unemployment was on the rise, even before states started implementing stay-at-home orders. By the time stay-at-home orders were effective, unemployment had almost peaked and began trending downwards. We also see that unemployment peaked and returned to much lower levels before positive cases began to spike upward. Further analysis needs to be completed to control for other potential variables, but our current assessment is that Google search trends for terms with COVID in them had a positive relationship in relation to unemployment. Our conclusion is that internet searches early in the growth of the COVID-19 pandemic resulted in a change in behavior of shoppers that negatively impacted the health of the retail industry as indicated by unemployment.  That behavior, though, changed as pandemic restrictions became the norm as unemployment began to fall.
+We see that the retail industry had a large spike in unemployment right around the time that the US reported the first positive cases of COVID. We also see that unemployment was on the rise, even before states started implementing stay-at-home orders. By the time stay-at-home orders were effective, unemployment had almost peaked and began trending downwards. We also see that unemployment peaked and returned to much lower levels before positive cases began to spike upward. Further analysis needs to be completed to control for other potential variables, but our current assessment is that Google search trends for terms with COVID in them had a positive relationship in relation to unemployment. Our conclusion is that internet searches early in the growth of the COVID-19 pandemic resulted in a change in behavior of shoppers that negatively impacted the health of the retail industry as indicated by unemployment.  That behavior, though, changed as pandemic restrictions became the norm and unemployment began to fall.
 
 
-[1^]: "The pandemic of social media panic travels faster than the COVID-19 outbreak", Anneliese Depoux, PhD, Sam Martin, PhD, Emilie Karafillakis, MSc, Raman Preet, MPH, Annelies Wilder-Smith, MD, Heidi Larson, PhD; *Journal of Travel Medicine*, March 30, 2020.
+[^1]: "The pandemic of social media panic travels faster than the COVID-19 outbreak", Anneliese Depoux, PhD, Sam Martin, PhD, Emilie Karafillakis, MSc, Raman Preet, MPH, Annelies Wilder-Smith, MD, Heidi Larson, PhD; *Journal of Travel Medicine*, March 30, 2020.
