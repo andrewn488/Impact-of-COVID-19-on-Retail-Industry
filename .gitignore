@@ -38,10 +38,13 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+<<<<<<< HEAD
 # .dta and .zip files
 *.dta
 *.gz
 
 # Mac specific ignore
 .DS_Store
+=======
+>>>>>>> d0091e575bde2ce887014755feeedb02948145b7
 

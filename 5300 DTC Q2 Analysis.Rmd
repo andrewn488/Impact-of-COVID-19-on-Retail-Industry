@@ -1,0 +1,90 @@
+---
+title: "5300 DTC Q2 Analysis"
+author: "Andrew Nalundasan"
+date: "3/19/2021"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+source('../AN_code/q2_code.R', local = FALSE)
+```
+
+
+## Introduction
+We have officially been living in a COVID-19 pandemic world for over a full year now. The World Health Organization (WHO) officially declared the spread of COVID-19 as a global pandemic on March 11, 2020. The following research below outlines data utilized from IPUMS Current Population Survey (CPS) to answer the question of: "How has the retail industry fared relative to other industries?". Data analyzed to answer this question ranged from January 2019 to January 2021. See below for further detail on variables used from the data set.
+
+The industries of interest included in this analysis were chosen as what the research team collectively thought as a robust representation of data provided by IPUMS. Each industry had reasons why they were chosen so that comparisons could be made against the Retail industry to answer this research question. 
+Through this research, it was found that every industry from the ones chosen had a higher probability of being employed relative to Retail, except for Arts-Entertainment-Recreation-Food.
+
+Before performing any analyses, assumptions were made about what the results would be based on experiences from the researchers. It was assumed that the Construction industry would see an uptick in employment due to office buildings being closed and commutes for non-essential professionals stopping as employees began working from home. The assumption was that since less of these activities would be taking place (commuting to work, having to schedule office renovations around the office working schedule, etc.) that the Construction companies would be able to start activities ahead of schedule and begin work on more projects. 
+
+The Public Administration variable was included to see how the public sector fared the effects of the pandemic versus private employers. The assumption made for this industry was that it would fare better than all other industries due to its known resilience as an industry. Projects that public workers work on either have funding or they do not have funding. It was assumed that it could cost more money to stop projects and pick back up again in the future over abruptly pulling the plug on any work currently in progress.
+
+The Finance, Insurance, and Real Estate industry was included in attempts to capture the 9-5 corporate job working class. It was assumed that this industry would certainly experience a dip in employment, so it was chosen to make comparisons of 'how much' with the Retail industry. 
+
+Arts, Entertainment, Recreation, Accommodations, and Food industry was assumed to be the harshest impact of the COVID-19 pandemic. Nobody was out shopping in brick and mortar storefronts, going to museums, traveling, or eating out at restaurants anymore. The impact on the health of this industry was assumed to take the hardest hit of the industries chosen.  
+
+
+## Variables Used in Data Set
+
+The 'covid' variable was created by dividing the time of our data set from April 2020 onward to signify data 'post-COVID' while data from February 2020 and prior signified data 'pre-COVID'. We removed March 2020 from our data set to better divide the two different times. Figure 1 provided below shows a sharp drop in employment rate between February and April 2020. March 2020 was omitted to clearly draw this line. This is also known as the Doughnut hole approach.  
+
+The 'time' variable represents the passing of time in 1-month units. 
+
+Industries were provided in the IPUMS data extracted from the IPUMS site. This data was merged with the provided 'indnames.csv' file, with the industry codes mapped to the appropriate industry. The categorical variable named “industry” was created, which was used in the analysis to identify the associated data for each industry of interest in the data set.
+
+## Assumptions
+Each industry listed here can be argued to be split up into several different industries within each industry. For example, Retail could be divided into apparel, home goods, convenience stores, grocery stores, clothing stores, automotive retailers, etc. Construction could be broken down into commercial development, housing development, building of new structures, renovation of existing structures, etc. But for the purposes of this analysis they were left categorized how they were provided by IPUMS. Within the provided data in 'indnames.csv', Construction had one line of data in the file compared to the other industries which had hundreds of matching industry codes. Retail had the most matching industry codes, with 1121 matches. We assume here that we are able to add correct weighting to our data by adding population weight data to our survey. We assume that the data provided through the industry codes that each industry can be compared at an even level. 
+
+Two of our industries were grouped together by IPUMS to represent one industry each. These categories were: Arts-Entertainment-Recreation-Food and Finance-Insurance-Real Estate industries. That would be seven industries combined into two industries within this analysis. For our analysis to hold, we had to go with the assumptions that these industries are relevant enough to each other that they could be combined into the two combined industries. In reality, all seven of these industries could be treated separately. By doing this we may have missed out on the nuanced, individual multi-industry level effects this pandemic may have had on the employment rates for each unique industry. 
+
+
+## Regression
+To answer the question: 'How has retail fared relative to other industries?', the analysis chosen was a multivariate OLS analysis with interaction terms on "covid\*industry" and "covid\*time". The interaction term was chosen to see the different ways that COVID-19 has affected the health of each industry as measured by employment rates. We then also included an interaction between the binary COVID-19 indicator variable with the 'time' variable that incrementally increases to represent the passing of time measured in 1-month units. We included this additional interaction in our model to control for the correlation we believe exists between 'time' and the COVID-19 pandemic variable in our model.
+
+
+```{r export_summs table, echo=TRUE}
+industry_reg_z <- lm(employed ~ industry*covid + covid*time, merged_df)
+export_summs(industry_reg_z, digits = 5, lush = TRUE)
+```
+
+#### Table 1: Regression results displayed in export summs table. 
+
+
+## Results
+The analysis answers the question being asked by taking into account the interaction of the 'covid' variable with all industries relative to the Retail industry. In the shown factor comparison included in Table 1 above, the Retail industry is omitted because it is the reference group that the other factors are being compared to. The numbers we focus on here are the coefficients of the interactions between the 'industry' and 'covid' variables in our model. These coefficients measure the effect of 'covid' on the specific industry over the course of the COVID-19 pandemic on the probability of being employed relative to the Retail industry. The measured employment rates are what is being used to assess the health of each given industry. The interpretation of these coefficients are as follows:
+
+Holding all other variables in the model constant, being employed in the Public Administration industry during the COVID-19 pandemic is associated with approximately 3.5 percentage points higher probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+Holding all other variables in the model constant, being employed in the Finance, Insurance, and Real Estate industry during the COVID-19 pandemic is associated with approximately 2.5 percentage points higher probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+Holding all other variables in the model constant, being employed in the Construction industry during the COVID-19 pandemic is associated with approximately 0.57 percentage points higher probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+Holding all other variables in the model constant, being employed in the Arts, Entertainment, Recreation, Accommodation, and Food industry during the COVID-19 pandemic is associated with approximately 11 percentage points lower probability of being employed relative to the Retail industry during the COVID-19 pandemic.
+
+
+```{r industry_plot, echo=FALSE}
+industry_plot
+```
+
+#### Figure 1: Employment Rates for industries pre-COVID and post-COVID.
+
+Above in Figure 1, when COVID "started", which we consider as March 2020, there is an immediate decline in employment between all of our selected industries. The hardest hit industries were Art-Entertainment-Recreation-Food, and Retail industries. The rate of which employees within the Retail industry lost their jobs was not as steep as Art-Entertainment-Recreation-Food. The trends in lost jobs between Retail and Construction was very similar, but Construction found its low point before Retail did, resulting in switching to 'recovery' mode before Retail could begin recovering.
+
+The slowest amount of recovery growth seen has been the Finance-Insurance-Real Estate industry, but they had one of the least impacted industries of our list to begin with. Public Administration maintained consistency with starting as the highest employed industry and ending in the same position after the pandemic hit. It could be inferred that the Public Administration industry is the most stable of the included industries since it could withstand a global pandemic. Prior to March 2020, Retail was below these two top industries, and the gap has only gotten wider given the pandemic. 
+
+
+## Conclusion
+Through this research, it was found that the Arts-Entertainment-Recreation-Food industry was impacted the most by the pandemic, dropping in employment rate from ~0.94 to ~ 0.63. The Retail industry was impacted second hardest dropping in employment rate from ~ 0.95 to ~0.83.The gap between minimum employment rates between Retail and the Arts-Entertainment-Recreation-Food industries were the biggest gap that was found. The Retail minimum employment rate was ~ 0.83 while the minimum for Arts-Entertainment-Recreation-Food was ~0.63.
+
+The remaining three industries did not see as dramatic of a wave of layoffs in March 2020. The Construction industry was clustered close to Retail but the minimum employment rate that it saw was ~0.85, just above where the minimum for Retail was. Finance-Insurance-Real Estate and the Public Administration industries felt some effect of the COVID-19 pandemic in terms of employment, but only a small dip in comparison to our other three industries. These two industries have not quite yet made a full recovery after 12 months into the pandemic, but they are both slowly making their way back up to pre-COVID employment rates. 
+
+A positive note about the two most impacted industries due to COVID was that their recovery rates appeared to be better than the other three industries of comparison. This can be seen with the sharper upward slopes of both of these trends. From April 2020 onward, all the industries besides Finance-Insurance-Real Estate began recovering. During Retail's recovery, it climbs its way back up to eventually overtake Construction as third place on our list as of January 2021. 
+
+Within the bounds of our data set, the Retail industry has never seen employment rates greater than Finance-Insurance-Real Estate or Public Administration. Retail's maximum employment rate was hovering around 0.95 pre-COVID, which is close to where the Finance-Insurance-Real Estate minimum rates are after March 2020, post-COVID. So the health of the best times for the Retail industry was about on par as the worst times for the Finance-Insurance-Real Estate industry. 
